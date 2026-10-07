@@ -323,6 +323,14 @@ class AetheraCalendarApp {
         submitQuick();
       }
     });
+    quickInput?.addEventListener('input', () => {
+      if (quickInput.value.trim() === '/') {
+        quickInput.value = '';
+        if (typeof this.openSlashPalette === 'function') {
+          this.openSlashPalette('');
+        }
+      }
+    });
 
     // 7. AI Schedule Assistant Modal
     document.getElementById('cal-quick-ai-btn')?.addEventListener('click', () => this.openAIModal());
@@ -1090,6 +1098,12 @@ class AetheraCalendarApp {
      EVENT MUTATION OPERATIONS
      -------------------------------------------------------------------------- */
   async handleQuickAddTask(rawText) {
+    if (!rawText || !rawText.trim()) return;
+    const trimmed = rawText.trim();
+    if (trimmed.startsWith('/')) {
+      return this.executeInlineSlashCommand(trimmed, this.selectedDate);
+    }
+
     // Check if time is in the string (e.g. "2pm Meeting" or "14:00 Sync")
     let startTime = '09:00';
     let endTime = '10:00';
@@ -1544,11 +1558,15 @@ class AetheraCalendarApp {
 
   async handleQuickAddTaskForDate(rawText, targetDate) {
     if (!rawText || !rawText.trim()) return;
+    const trimmed = rawText.trim();
     const date = targetDate || this.selectedDate;
+    if (trimmed.startsWith('/')) {
+      return this.executeInlineSlashCommand(trimmed, date);
+    }
 
     let startTime = '09:00';
     let endTime = '10:00';
-    let title = rawText.trim();
+    let title = trimmed;
 
     const match = title.match(/^(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:-|to)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?\s*(.*)$/i);
     if (match) {
@@ -1634,6 +1652,14 @@ class AetheraCalendarApp {
       if (e.key === 'Enter') {
         e.preventDefault();
         submitQuick();
+      }
+    });
+    quickInput?.addEventListener('input', () => {
+      if (quickInput.value.trim() === '/') {
+        quickInput.value = '';
+        if (typeof this.openSlashPalette === 'function') {
+          this.openSlashPalette('');
+        }
       }
     });
 
@@ -1751,15 +1777,16 @@ class AetheraCalendarApp {
     const dateStr = targetDate || this.selectedDate || new Date().toISOString().split('T')[0];
     if (!text) return [];
 
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const timeRangeRegex = /(?:jam\s*)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)\s*(?:-|–|—|sampai|to)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)/i;
+    const timeRangeRegex = /(?:jam\s*)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)\s*(?:-|–|—|sampai|to)\s*(?:jam\s*)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)/i;
+    const singleTimeRegex = /(?:\b(?:at|pada|jam|pukul)\s+(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)|(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam))\b)/i;
+    const durationRegex = /(?:(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|jam)|(\d+)\s*(?:minutes?|mins?|menit)|(?:an\s+hour|sejam))/i;
 
     const toStandardTime = (tStr, defaultHour = 9) => {
       if (!tStr) return String(defaultHour).padStart(2, '0') + ':00';
       let s = tStr.toLowerCase().trim().replace('jam', '').trim().replace('.', ':');
-      let isPm = s.includes('pm');
-      let isAm = s.includes('am');
-      s = s.replace(/am|pm/, '').trim();
+      let isPm = s.includes('pm') || s.includes('sore') || s.includes('malam');
+      let isAm = s.includes('am') || s.includes('pagi');
+      s = s.replace(/am|pm|pagi|siang|sore|malam/g, '').trim();
       let parts = s.split(':');
       let h = parseInt(parts[0], 10);
       let m = parts[1] ? parseInt(parts[1], 10) : 0;
@@ -1770,24 +1797,33 @@ class AetheraCalendarApp {
       return String(Math.min(23, Math.max(0, h))).padStart(2, '0') + ':' + String(Math.min(59, Math.max(0, m))).padStart(2, '0');
     };
 
+    const addMinutesToTime = (timeStr, minutesToAdd) => {
+      const [h, m] = (timeStr || '09:00').split(':').map(Number);
+      const totalMinutes = h * 60 + m + minutesToAdd;
+      const endH = Math.floor(totalMinutes / 60) % 24;
+      const endM = totalMinutes % 60;
+      return String(endH).padStart(2, '0') + ':' + String(endM).padStart(2, '0');
+    };
+
     const detectQuadrant = (title) => {
       const l = (title || '').toLowerCase();
-      if (/urgent|critical|deadline|submit|due|exam|fix|cve|darurat|kritis|tenggat|ujian|perbaiki|bug/i.test(l)) {
+      if (/urgent|critical|deadline|submit|due|exam|fix|cve|darurat|kritis|tenggat|ujian|perbaiki|bug|krisis/i.test(l)) {
         return { priority: 'Q1', quadrant: 'Urgent & Important', category: 'deadline' };
       }
       if (/meet|sync|call|standup|discuss|client|demo|interview|rapat|temu|koordinasi|telepon|diskusi/i.test(l)) {
         return { priority: 'Q3', quadrant: 'Urgent, Not Important', category: 'meeting' };
       }
-      if (/gym|workout|break|lunch|dinner|rest|walk|recovery|sleep|santai|makan|istirahat|olahraga/i.test(l)) {
+      if (/gym|workout|break|lunch|dinner|rest|walk|recovery|sleep|santai|makan|istirahat|olahraga|tidur|jalan/i.test(l)) {
         return { priority: 'Q4', quadrant: 'Not Urgent, Not Important', category: 'personal' };
       }
-      if (/study|belajar|baca|math|calculus|physics|course|kelas|tugas|homework|kuliah/i.test(l)) {
+      if (/study|belajar|baca|math|calculus|physics|course|kelas|tugas|homework|kuliah|riset|research/i.test(l)) {
         return { priority: 'Q2', quadrant: 'Important, Not Urgent', category: 'study' };
       }
       return { priority: 'Q2', quadrant: 'Important, Not Urgent', category: 'deep-work' };
     };
 
     let rawTasks = [];
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (lines.length > 1) {
       rawTasks = lines;
     } else {
@@ -1799,29 +1835,65 @@ class AetheraCalendarApp {
     const events = [];
 
     for (let raw of rawTasks) {
-      const timeMatch = raw.match(timeRangeRegex);
       let title = raw;
       let startTime = '';
       let endTime = '';
 
-      if (timeMatch) {
-        startTime = toStandardTime(timeMatch[1], baseHour);
-        endTime = toStandardTime(timeMatch[2], baseHour + 1);
-        title = raw.replace(timeMatch[0], '').replace(/^(?:at|pada|jam|dari|from|–|-|:)\s*/i, '').replace(/[–\-:]\s*$/, '').trim();
-      } else {
-        startTime = String(baseHour).padStart(2, '0') + ':' + String(baseMin).padStart(2, '0');
-        let endH = baseHour + 1;
-        let endM = (baseMin + 30) % 60;
-        if (baseMin + 30 >= 60) endH++;
-        endTime = String(endH).padStart(2, '0') + ':' + String(endM).padStart(2, '0');
-        baseHour = endH;
-        baseMin = (endM + 15) % 60;
-        if (endM + 15 >= 60) baseHour++;
-        if (baseHour >= 22) baseHour = 9;
+      // Check for duration (e.g. "2 hours for deep coding", "an hour", "45 mins")
+      let durationMinutes = 60;
+      const durMatch = raw.match(durationRegex);
+      if (durMatch) {
+        if (durMatch[1]) {
+          durationMinutes = Math.round(parseFloat(durMatch[1]) * 60);
+        } else if (durMatch[2]) {
+          durationMinutes = parseInt(durMatch[2], 10);
+        } else {
+          durationMinutes = 60;
+        }
+        title = title.replace(durMatch[0], '');
       }
 
-      title = title.replace(/^[\s*•\-\d.)|:]+/, '').trim();
-      if (!title) title = 'Focus Session';
+      // Check for time range (e.g. 10:00 to 11:30 or 14:00 - 16:00)
+      const rangeMatch = raw.match(timeRangeRegex);
+      if (rangeMatch) {
+        startTime = toStandardTime(rangeMatch[1], baseHour);
+        endTime = toStandardTime(rangeMatch[2], baseHour + 1);
+        title = title.replace(rangeMatch[0], '');
+      } else {
+        // Check for single time (e.g. "at 5pm", "jam 14:00")
+        const singleMatch = raw.match(singleTimeRegex);
+        if (singleMatch && (raw.includes(':') || /am|pm|pagi|siang|sore|malam|jam|at|pada/i.test(raw))) {
+          const matchedTime = singleMatch[1] || singleMatch[2];
+          startTime = toStandardTime(matchedTime, baseHour);
+          endTime = addMinutesToTime(startTime, durationMinutes);
+          title = title.replace(singleMatch[0], '');
+        } else {
+          // Flow schedule automatically
+          startTime = String(baseHour).padStart(2, '0') + ':' + String(baseMin).padStart(2, '0');
+          endTime = addMinutesToTime(startTime, durationMinutes);
+          const [endH, endM] = endTime.split(':').map(Number);
+          baseHour = endH;
+          baseMin = (endM + 15) % 60;
+          if (endM + 15 >= 60) baseHour++;
+          if (baseHour >= 22) baseHour = 9;
+        }
+      }
+
+      // Clean title text thoroughly
+      for (let i = 0; i < 3; i++) {
+        title = title
+          .replace(/^(?:and\s+|dan\s+|then\s+|lalu\s+)/i, '')
+          .replace(/^(?:i\s+have\s+(?:a\s+)?|i\s+need\s+(?:to\s+)?|i\s+want\s+(?:to\s+)?|need\s+(?:to\s+)?|schedule\s+(?:a\s+)?|plan\s+(?:a\s+)?|ada\s+(?:acara\s+|rapat\s+)?|harus\s+|mau\s+|perlu\s+|jadwal(?:kan)?\s+)/i, '')
+          .replace(/^(?:at|on|for|pada|jam|dari|untuk|–|-|:)\s*/i, '')
+          .replace(/[\s,–\-:]*(?:from|at|on|for|due|pada|jam|dari|untuk)$/i, '')
+          .replace(/^[\s*•\-\d.)|:]+/, '')
+          .replace(/[|*]+$/, '')
+          .trim();
+      }
+
+      if (!title || title.length < 2) title = 'Focus Session';
+      // Capitalize first letter
+      title = title.charAt(0).toUpperCase() + title.slice(1);
 
       const quad = detectQuadrant(title);
       events.push({
@@ -1882,7 +1954,7 @@ class AetheraCalendarApp {
         this.displayParsedAIEvents(parsed, targetDate);
         this.isGeneratingAI = false;
         if (btnText) btnText.textContent = this.isId() ? 'Buat Jadwal' : 'Generate Schedule';
-      }, 350);
+      }, 300);
       return;
     }
 
@@ -1922,8 +1994,12 @@ class AetheraCalendarApp {
 
       const data = await response.json();
       let generatedText = "";
-      if (data.candidates && data.candidates[0]?.content?.parts) {
+      if (data.text) {
+        generatedText = data.text;
+      } else if (data.candidates && data.candidates[0]?.content?.parts) {
         generatedText = data.candidates[0].content.parts.map(p => p.text).join('\n');
+      } else if (data.reply) {
+        generatedText = data.reply;
       }
 
       if (!generatedText) {
@@ -1934,6 +2010,10 @@ class AetheraCalendarApp {
       let parsed = [];
       if (window.aetheraDB && typeof window.aetheraDB.parseAIScheduleText === 'function') {
         parsed = window.aetheraDB.parseAIScheduleText(generatedText, targetDate);
+      }
+
+      if (!parsed || parsed.length === 0) {
+        parsed = this.parseUserPromptToScheduleEvents(generatedText, targetDate);
       }
 
       if (!parsed || parsed.length === 0) {
@@ -1999,7 +2079,7 @@ class AetheraCalendarApp {
     if (!this.parsedAIEvents || this.parsedAIEvents.length === 0) return;
 
     const container = document.getElementById('ai-parsed-items-list');
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    const checkboxes = container ? container.querySelectorAll('input[type="checkbox"]') : [];
     const selectedEvents = [];
 
     checkboxes.forEach((cb, idx) => {
@@ -2017,6 +2097,12 @@ class AetheraCalendarApp {
       await window.aetheraDB.saveCalendarEventsBatch(selectedEvents);
     }
 
+    // Set selected date to the imported event's date so inspector immediately displays the new events
+    if (selectedEvents[0] && selectedEvents[0].date) {
+      this.selectedDate = selectedEvents[0].date;
+      this.currentDate = new Date(selectedEvents[0].date + 'T12:00:00');
+    }
+
     // CRITICAL: Reload in-memory events so calendar re-renders immediately without full page refresh
     await this.loadEvents();
     this.closeAIModal();
@@ -2027,6 +2113,11 @@ class AetheraCalendarApp {
       this.renderAgendaView();
     } else if (this.currentView === 'week') {
       this.renderWeekView();
+    }
+
+    const dayModal = document.getElementById('cal-day-detail-modal');
+    if (dayModal && dayModal.classList.contains('is-open')) {
+      this.renderDayDetailModal(this.selectedDate);
     }
   }
 
@@ -2262,25 +2353,51 @@ class AetheraCalendarApp {
         desc: this.isId() ? 'Akses Aethera Cortex AI Studio lengkap' : 'Launch full Aethera Cortex AI Studio',
         category: this.isId() ? 'Aplikasi Terhubung' : 'Connected Apps',
         action: () => { window.location.href = 'ai.html'; }
+      },
+      {
+        id: 'clear',
+        command: '/clear',
+        icon: '🗑️',
+        title: this.isId() ? 'Bersihkan Kalender' : 'Clear Calendar Events',
+        tag: '/clear',
+        desc: this.isId() ? 'Hapus semua acara untuk mulai baru' : 'Clear all scheduled events for a clean slate',
+        category: this.isId() ? 'Sistem' : 'System',
+        action: async () => {
+          const confirmMsg = this.isId()
+            ? 'Hapus semua acara dari kalender ini untuk memulai dari awal? Tindakan ini tidak dapat dibatalkan.'
+            : 'Clear all events from this calendar for a clean slate? This action cannot be undone.';
+          if (confirm(confirmMsg)) {
+            if (window.aetheraDB) {
+              await window.aetheraDB.clearAllCalendarEvents();
+            }
+            await this.loadEvents();
+            this.render();
+          }
+        }
       }
     ];
 
-    const openPalette = () => {
+    this.openSlashPalette = (initialQuery = '') => {
       modal.classList.add('is-open');
       modal.setAttribute('aria-hidden', 'false');
-      input.value = '';
-      this.renderSlashPaletteResults('');
-      setTimeout(() => input.focus(), 50);
+      input.value = initialQuery;
+      this.renderSlashPaletteResults(initialQuery);
+      setTimeout(() => {
+        input.focus();
+        if (initialQuery) {
+          input.setSelectionRange(initialQuery.length, initialQuery.length);
+        }
+      }, 50);
     };
 
-    const closePalette = () => {
+    this.closeSlashPalette = () => {
       modal.classList.remove('is-open');
       modal.setAttribute('aria-hidden', 'true');
     };
 
     headerSlashBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      openPalette();
+      this.openSlashPalette('');
     });
 
     // Global keyboard listener for '/' or 'Ctrl+K'
@@ -2290,27 +2407,27 @@ class AetheraCalendarApp {
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        openPalette();
+        this.openSlashPalette('');
         return;
       }
 
       if (e.key === '/' && !isEditable && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
-        openPalette();
+        this.openSlashPalette('');
         return;
       }
 
       if (modal.classList.contains('is-open')) {
         if (e.key === 'Escape') {
           e.preventDefault();
-          closePalette();
+          this.closeSlashPalette();
         }
       }
     });
 
     // Close on clicking backdrop
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) closePalette();
+      if (e.target === modal) this.closeSlashPalette();
     });
 
     // Search input typing and navigation
@@ -2337,10 +2454,180 @@ class AetheraCalendarApp {
           const cmdId = selectedEl.dataset.cmdId;
           const query = input.value.trim();
           this.executeSlashPaletteCommand(cmdId, query);
-          closePalette();
+          this.closeSlashPalette();
         }
       }
     });
+  }
+
+  executeInlineSlashCommand(rawText, targetDate = null) {
+    const trimmed = (rawText || '').trim();
+    if (!trimmed.startsWith('/')) return false;
+
+    const date = targetDate || this.selectedDate;
+    const parts = trimmed.substring(1).trim().split(/\s+/);
+    const cmdKey = (parts[0] || '').toLowerCase();
+    const arg = trimmed.substring(1).replace(/^[^\s]+\s*/, '').trim();
+
+    if (cmdKey === 'plan' || cmdKey === 'ai') {
+      this.openAIModal();
+      if (arg) {
+        const promptInput = document.getElementById('ai-schedule-prompt');
+        if (promptInput) {
+          promptInput.value = arg;
+          promptInput.focus();
+        }
+      }
+      return true;
+    }
+
+    if (cmdKey === 'event' || cmdKey === 'add') {
+      this.openEventModal(null, date);
+      if (arg) {
+        const titleInput = document.getElementById('event-form-title');
+        if (titleInput) { titleInput.value = arg; titleInput.focus(); }
+      }
+      return true;
+    }
+
+    if (cmdKey === 'today') {
+      this.jumpToToday();
+      return true;
+    }
+
+    if (cmdKey === 'q1' || cmdKey === 'q2' || cmdKey === 'q3' || cmdKey === 'q4') {
+      const q = cmdKey.toUpperCase();
+      if (arg) {
+        this.saveQuickEventWithQuadrant(arg, date, q);
+      } else {
+        this.openEventModal(null, date, q);
+      }
+      return true;
+    }
+
+    if (cmdKey === 'month') {
+      this.switchView('month');
+      return true;
+    }
+
+    if (cmdKey === 'week') {
+      this.switchView('week');
+      return true;
+    }
+
+    if (cmdKey === 'matrix') {
+      this.switchView('matrix');
+      return true;
+    }
+
+    if (cmdKey === 'agenda') {
+      this.switchView('agenda');
+      return true;
+    }
+
+    if (cmdKey === 'sync') {
+      if (window.aetheraDB && typeof window.aetheraDB.syncWithCloud === 'function') {
+        window.aetheraDB.syncWithCloud().then(() => {
+          this.loadEvents().then(() => this.render());
+        });
+      }
+      return true;
+    }
+
+    if (cmdKey === 'notes') {
+      window.location.href = 'notes.html';
+      return true;
+    }
+
+    if (cmdKey === 'ai-studio') {
+      window.location.href = 'ai.html';
+      return true;
+    }
+
+    if (cmdKey === 'clear') {
+      const confirmMsg = this.isId()
+        ? 'Hapus semua acara dari kalender ini untuk memulai dari awal? Tindakan ini tidak dapat dibatalkan.'
+        : 'Clear all events from this calendar for a clean slate? This action cannot be undone.';
+      if (confirm(confirmMsg)) {
+        if (window.aetheraDB) {
+          window.aetheraDB.clearAllCalendarEvents().then(() => {
+            this.loadEvents().then(() => this.render());
+          });
+        }
+      }
+      return true;
+    }
+
+    // Default / Unknown slash command: open palette modal with filter
+    if (typeof this.openSlashPalette === 'function') {
+      this.openSlashPalette(trimmed);
+    }
+    return true;
+  }
+
+  async saveQuickEventWithQuadrant(rawTitle, date, quadrant = 'Q2') {
+    let startTime = '09:00';
+    let endTime = '10:00';
+    let title = rawTitle.trim();
+
+    const match = title.match(/^(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:-|to)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?\s*(.*)$/i);
+    if (match) {
+      const parseHour = (str) => {
+        const m = str.trim().match(/^(\d{1,2}):?(\d{2})?\s*(am|pm)?$/i);
+        if (!m) return '09:00';
+        let h = parseInt(m[1], 10);
+        const mins = m[2] || '00';
+        const ampm = m[3] ? m[3].toLowerCase() : null;
+        if (ampm === 'pm' && h < 12) h += 12;
+        if (ampm === 'am' && h === 12) h = 0;
+        return `${String(h).padStart(2, '0')}:${mins}`;
+      };
+
+      if (match[1]) startTime = parseHour(match[1]);
+      if (match[2]) {
+        endTime = parseHour(match[2]);
+      } else {
+        const [hh, mm] = startTime.split(':').map(Number);
+        endTime = `${String((hh + 1) % 24).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+      }
+      if (match[3] && match[3].trim().length > 1) {
+        title = match[3].trim();
+      }
+    }
+
+    let cat = 'work';
+    if (quadrant === 'Q1') cat = 'deadline';
+    else if (quadrant === 'Q2') cat = 'deep-work';
+    else if (quadrant === 'Q3') cat = 'meeting';
+    else if (quadrant === 'Q4') cat = 'personal';
+
+    const quadrantNames = {
+      Q1: 'Urgent & Important',
+      Q2: 'Important, Not Urgent',
+      Q3: 'Urgent, Not Important',
+      Q4: 'Not Urgent, Not Important'
+    };
+
+    const newEvent = {
+      title,
+      date: date || this.selectedDate,
+      startTime,
+      endTime,
+      category: cat,
+      priority: quadrant,
+      quadrant: quadrantNames[quadrant] || 'Important, Not Urgent',
+      completed: false
+    };
+
+    if (window.aetheraDB) {
+      await window.aetheraDB.saveCalendarEvent(newEvent);
+    }
+    await this.loadEvents();
+    this.render();
+    const dayModal = document.getElementById('cal-day-detail-modal');
+    if (dayModal && dayModal.classList.contains('is-open')) {
+      this.renderDayDetailModal(this.selectedDate);
+    }
   }
 
   renderSlashPaletteResults(rawQuery) {

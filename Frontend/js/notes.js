@@ -774,11 +774,14 @@
       // Input event to catch '/' slash command, toggle empty state, and trigger auto-save
       content.addEventListener('input', () => {
         updateEmptyState();
-        const text = content.innerText;
-        if (text.endsWith('/')) {
-          this.showSlashMenu(content);
-        } else if (text.includes('/')) {
-          this.filterSlashMenu(text.substring(text.lastIndexOf('/') + 1));
+        const text = content.innerText || '';
+        if (text.includes('/')) {
+          const slashMenu = document.getElementById('notion-slash-menu');
+          if (!slashMenu || slashMenu.style.display === 'none') {
+            this.showSlashMenu(content);
+          }
+          const query = text.substring(text.lastIndexOf('/') + 1);
+          this.filterSlashMenu(query);
         } else {
           this.hideSlashMenu();
         }
@@ -1344,7 +1347,28 @@
         const checked = el.querySelector('.todo-checkbox')?.classList.contains('checked') || false;
         const icon = el.querySelector('.callout-icon')?.textContent || null;
 
-        updatedBlocks.push({ id, type, text, checked, icon });
+        const blockData = { id, type, text, checked, icon };
+
+        if (type === 'matrix') {
+          blockData.q1 = el.querySelector('.matrix-quad-box.q1 .block-content')?.innerText || '• Critical deadline / submission';
+          blockData.q2 = el.querySelector('.matrix-quad-box.q2 .block-content')?.innerText || '• Architecture & deep study';
+          blockData.q3 = el.querySelector('.matrix-quad-box.q3 .block-content')?.innerText || '• Team standup & sync';
+          blockData.q4 = el.querySelector('.matrix-quad-box.q4 .block-content')?.innerText || '• Workout & recovery';
+        } else if (type === 'table') {
+          blockData.headers = Array.from(el.querySelectorAll('table th')).map(th => th.innerText.trim());
+          blockData.rows = Array.from(el.querySelectorAll('table tbody tr')).map(tr =>
+            Array.from(tr.querySelectorAll('td')).map(td => td.innerText.trim())
+          );
+        } else if (type === 'calendar-event') {
+          blockData.eventTitle = el.querySelector('.note-cal-event-title')?.textContent?.trim() || text;
+          blockData.text = blockData.eventTitle;
+          const metaSpans = el.querySelectorAll('.note-cal-event-meta span');
+          if (metaSpans[0]) blockData.eventDate = metaSpans[0].textContent.replace('📅', '').trim();
+          if (metaSpans[1]) blockData.eventTime = metaSpans[1].textContent.replace('⏰', '').trim();
+          if (metaSpans[2]) blockData.priority = metaSpans[2].textContent.replace(/[\[\]]/g, '').trim();
+        }
+
+        updatedBlocks.push(blockData);
       });
 
       note.blocks = updatedBlocks;

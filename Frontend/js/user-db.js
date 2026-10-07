@@ -441,42 +441,67 @@ class AetheraClientDB {
     let currentQuadrantName = 'Important, Not Urgent';
 
     const parseTime = (str) => {
-      const match = str.trim().match(/^(\d{1,2}):?(\d{2})?\s*(am|pm)?$/i);
+      if (!str) return '09:00';
+      let s = str.trim().toLowerCase().replace('jam', '').trim().replace('.', ':');
+      let isPm = s.includes('pm') || s.includes('sore') || s.includes('malam');
+      let isAm = s.includes('am') || s.includes('pagi');
+      s = s.replace(/am|pm|pagi|siang|sore|malam/g, '').trim();
+      const match = s.match(/^(\d{1,2})(?::(\d{2}))?$/);
       if (!match) return '09:00';
       let h = parseInt(match[1], 10);
       const m = match[2] ? match[2] : '00';
-      const ampm = match[3] ? match[3].toLowerCase() : null;
-      if (ampm === 'pm' && h < 12) h += 12;
-      if (ampm === 'am' && h === 12) h = 0;
-      return `${String(h).padStart(2, '0')}:${m}`;
+      if (isPm && h < 12) h += 12;
+      if (isAm && h === 12) h = 0;
+      return `${String(Math.min(23, Math.max(0, h))).padStart(2, '0')}:${m}`;
     };
 
-    const timeRangeRegex = /(\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm))\s*(?:-|–|—|to)\s*(\d{1,2}:\d{2}\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm))/i;
+    const timeRangeRegex = /(?:jam\s*)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)\s*(?:-|–|—|to|sampai)\s*(?:jam\s*)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)/i;
+    const singleTimeRegex = /(?:(?:at|pada|jam|pukul)\s+)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)/i;
 
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      if (/q1|urgent\s*(&|and)\s*important/i.test(trimmed)) {
+      if (/q1|urgent\s*(&|and)\s*important|kritis|darurat/i.test(trimmed)) {
         currentQuadrant = 'Q1';
         currentQuadrantName = 'Urgent & Important';
-      } else if (/q2|not\s*urgent\s*(&|and)\s*important|deep\s*work/i.test(trimmed)) {
+      } else if (/q2|not\s*urgent\s*(&|and)\s*important|deep\s*work|strategis/i.test(trimmed)) {
         currentQuadrant = 'Q2';
         currentQuadrantName = 'Important, Not Urgent';
-      } else if (/q3|urgent\s*(&|and)\s*not\s*important|delegate/i.test(trimmed)) {
+      } else if (/q3|urgent\s*(&|and)\s*not\s*important|delegate|delegasi|rapat/i.test(trimmed)) {
         currentQuadrant = 'Q3';
         currentQuadrantName = 'Urgent, Not Important';
-      } else if (/q4|not\s*urgent\s*(&|and)\s*not\s*important|eliminate/i.test(trimmed)) {
+      } else if (/q4|not\s*urgent\s*(&|and)\s*not\s*important|eliminate|istirahat|santai/i.test(trimmed)) {
         currentQuadrant = 'Q4';
         currentQuadrantName = 'Not Urgent, Not Important';
       }
 
-      const m = trimmed.match(timeRangeRegex);
-      if (m) {
-        const startTime = parseTime(m[1]);
-        const endTime = parseTime(m[2]);
-        let title = trimmed
-          .replace(timeRangeRegex, '')
+      let startTime = '09:00';
+      let endTime = '10:00';
+      let matched = false;
+      let title = trimmed;
+
+      const mRange = trimmed.match(timeRangeRegex);
+      if (mRange) {
+        startTime = parseTime(mRange[1]);
+        endTime = parseTime(mRange[2]);
+        title = trimmed.replace(mRange[0], '');
+        matched = true;
+      } else {
+        const mSingle = trimmed.match(singleTimeRegex);
+        if (mSingle && (trimmed.includes(':') || /am|pm|pagi|siang|sore|malam|jam|at|pada/i.test(trimmed))) {
+          startTime = parseTime(mSingle[1]);
+          const [hh, mm] = startTime.split(':').map(Number);
+          endTime = `${String((hh + 1) % 24).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+          title = trimmed.replace(mSingle[0], '');
+          matched = true;
+        }
+      }
+
+      if (matched) {
+        title = title
+          .replace(/^(?:at|pada|jam|dari|from|–|-|:)\s*/i, '')
+          .replace(/[–\-:]\s*$/, '')
           .replace(/^[\s*•\-\d.)|:]+/, '')
           .replace(/[|*]+$/, '')
           .trim();
@@ -485,10 +510,10 @@ class AetheraClientDB {
           let cat = 'work';
           const lower = title.toLowerCase();
           if (/deep\s*work|code|program|architect|dev|build/i.test(lower)) cat = 'deep-work';
-          else if (/meeting|sync|standup|call|review|discuss/i.test(lower)) cat = 'meeting';
-          else if (/study|exam|calculus|math|reading|homework|learn|prep/i.test(lower)) cat = 'study';
-          else if (/deadline|submit|due|critical|urgent|cve|deploy/i.test(lower)) cat = 'deadline';
-          else if (/break|lunch|gym|workout|dinner|rest|walk|recovery/i.test(lower)) cat = 'personal';
+          else if (/meeting|sync|standup|call|review|discuss|rapat|temu/i.test(lower)) cat = 'meeting';
+          else if (/study|exam|calculus|math|reading|homework|learn|prep|belajar|kuliah/i.test(lower)) cat = 'study';
+          else if (/deadline|submit|due|critical|urgent|cve|deploy|tenggat|darurat/i.test(lower)) cat = 'deadline';
+          else if (/break|lunch|gym|workout|dinner|rest|walk|recovery|olahraga|istirahat|makan/i.test(lower)) cat = 'personal';
 
           events.push({
             id: 'evt_' + Math.random().toString(36).substr(2, 9),
