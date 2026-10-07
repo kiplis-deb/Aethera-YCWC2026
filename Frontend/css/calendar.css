@@ -281,6 +281,8 @@
   grid-template-columns: var(--cal-sidebar-width) 1fr var(--cal-inspector-width);
   overflow: hidden;
   height: calc(100vh - var(--cal-header-height));
+  width: 100%;
+  position: relative;
 }
 
 /* --------------------------------------------------------------------------
@@ -655,6 +657,8 @@
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  width: 100%;
+  min-width: 0;
   position: relative;
 }
 
@@ -2478,7 +2482,7 @@
 }
 
 .cal-sidebar-mobile-header {
-  display: none;
+  display: none !important;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 0.75rem;
@@ -2512,7 +2516,7 @@
 }
 
 .cal-sidebar-app-links {
-  display: none;
+  display: none !important;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   margin-bottom: 1rem;
@@ -2611,12 +2615,11 @@
     display: inline-flex;
   }
 
-  .cal-sidebar-mobile-header,
-  .cal-sidebar-app-links {
-    display: grid;
-  }
   .cal-sidebar-mobile-header {
-    display: flex;
+    display: flex !important;
+  }
+  .cal-sidebar-app-links {
+    display: grid !important;
   }
 
   /* Two-tier Mobile Header */

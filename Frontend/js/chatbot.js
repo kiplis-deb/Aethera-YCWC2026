@@ -1708,10 +1708,64 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
     return `${y}-${m}-${day}`;
   }
 
+  extractScheduleSubject(query) {
+    if (!query) return '';
+    let s = query.trim();
+
+    // 1. Remove common conversational greetings and lead-ins
+    s = s.replace(/^(hey|hi|hello|halo|tolong|please|can you(?: please)?|could you(?: please)?|would you(?: please)?|i want you to|i need you to|i want to|i need to|help me)\b\s*/gi, '');
+
+    // 2. Remove schedule/plan creation commands in English and Indonesian
+    s = s.replace(/\b(make|create|set\s+up|set|build|put|add|organize|generate|draft)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?(?:schedule|calendar|plan|agenda|timeline|time\s*table|to-?do)\b/gi, '');
+    s = s.replace(/\b(schedule|plan)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?/gi, '');
+    s = s.replace(/\b(?:tolong\s+)?(?:buatkan|buat|bikin|jadwalkan|rencanakan|masukkan\s+ke)\s*(?:saya\s+)?(?:jadwal|agenda|rencana|kalender)?\b/gi, '');
+
+    // 3. Remove calendar destinations
+    s = s.replace(/\b(to|on|in|into)\s+(?:my\s+|the\s+)?calendar\b/gi, '');
+    s = s.replace(/\b(ke|di|pada)\s+(?:kalender|jadwal)\s*(?:saya)?\b/gi, '');
+
+    // 4. Remove relative date words & common typos
+    s = s.replace(/\b(today|tonight|tomorrow|tommorow|tomorow|tmrw|tmr|yesterday|the\s+day\s+after\s+tomorrow|next\s+week|this\s+week|this\s+weekend)\b/gi, '');
+    s = s.replace(/\b(hari\s+ini|malam\s+ini|besok|lusa|minggu\s+depan|akhir\s+pekan\s+ini)\b/gi, '');
+
+    // 5. Remove days of the week with qualifiers
+    s = s.replace(/\b(?:on|this|next)?\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '');
+    s = s.replace(/\b(?:hari)?\s*(?:senin|selasa|rabu|kamis|jumat|sabtu|minggu)\b/gi, '');
+
+    // 6. Remove month + day patterns
+    s = s.replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?\b/gi, '');
+    s = s.replace(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/gi, '');
+
+    // 7. Remove time ranges and single times
+    s = s.replace(/(?:from\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:-|–|—|to|until|sampai)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '');
+    s = s.replace(/(?:at|around|pada|jam|pukul)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '');
+    s = s.replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, '');
+
+    // 8. Remove connecting prepositions, colons, or punctuation at start or end
+    s = s.replace(/^[\s,;:–—\-_/|*•#]+/g, '');
+    s = s.replace(/[\s,;:–—\-_/|*•#?!.]+$/g, '');
+    s = s.replace(/^(?:for|about|regarding|to|on|at|of|with|untuk|tentang|soal|buat)\s+/i, '');
+    s = s.replace(/^(?:meeting|session|call|event|review)\s+(?:for|about|with|on)\s+/i, '');
+    s = s.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
+
+    if (!s) return '';
+    return s.split(/\s+/)
+      .filter(w => w.length > 0)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
+
   cleanEventTitle(raw) {
     if (!raw) return 'Scheduled Activity';
-    let s = raw.trim();
-    s = s.replace(/^(to\s+|for\s+)/i, '');
+    const extracted = this.extractScheduleSubject(raw);
+    if (extracted && extracted.length >= 2 && !/^(plan|schedule|calendar|activity|session)$/i.test(extracted)) {
+      return extracted;
+    }
+    let s = raw.trim()
+      .replace(/^[\s,;:–—\-_/|*•#]+|[\s,;:–—\-_/|*•#?!.]+$/g, '')
+      .replace(/^(?:to|for|about|on|at|untuk)\s+/i, '')
+      .trim();
+    if (!s) return 'Scheduled Activity';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
@@ -1736,12 +1790,10 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
         if (m) {
           const rawTime1 = m[1];
           const rawTime2 = m[2];
-          let title = m[3]
-            .replace(/^(plan|schedule|put|add|tomorrow|today|tmrw|next week|for|at|on|:)+/gi, '')
-            .replace(/^[\s,;:\-–—]+|[\s,;:\-–—?!.]+$/g, '')
-            .trim();
+          const rawActivity = m[3];
+          const title = this.cleanEventTitle(rawActivity);
 
-          if (title.length >= 2 && !/^(tomorrow|today|tonight|next week)$/i.test(title)) {
+          if (title.length >= 2 && !/^(tomorrow|today|tonight|next week|plan|schedule)$/i.test(title)) {
             const startTime = this.normalizeTime(rawTime1);
             let endTime = rawTime2 ? this.normalizeTime(rawTime2) : null;
             if (!endTime) {
@@ -1752,7 +1804,7 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
             const prio = this.inferPriority(category);
             events.push({
               id: 'evt_' + Math.random().toString(36).substr(2, 9),
-              title: this.cleanEventTitle(title),
+              title,
               date: targetDate,
               startTime,
               endTime,
@@ -1770,21 +1822,11 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
 
     if (events.length === 0) {
       const times = this.parseTimes(query);
-      let title = query
-        .replace(/^(can you\s+)?(please\s+)?(make a plan\s+(for|to|on)?|plan\s+(my|a|an)?|schedule\s+(my|a|an)?|put\s+(my|a|an)?|add\s+(my|a|an)?)/i, '')
-        .replace(/(on\s+my\s+calendar|to\s+my\s+calendar|on\s+calendar|to\s+calendar)/gi, '')
-        .replace(/\b(today|tonight|tomorrow|tmrw|yesterday)\b/gi, '')
-        .replace(/\b(on|this|next)?\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
-        .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?\b/gi, '')
-        .replace(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/gi, '')
-        .replace(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/gi, '')
-        .replace(/(?:at|for|around)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/gi, '')
-        .replace(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/gi, '')
-        .replace(/^[\s,;:\-–—]+|[\s,;:\-–—?!.]+$/g, '')
-        .trim();
+      const subject = this.extractScheduleSubject(query);
 
-      if (title.length >= 2 && !/^(plan|schedule|calendar)$/i.test(title)) {
-        title = this.cleanEventTitle(title);
+      // If user specified an explicit activity/goal (e.g. "Math Exam", "Physics", "Chemistry Lab")
+      if (subject && subject.length >= 2 && !/^(plan|schedule|calendar)$/i.test(subject)) {
+        const title = this.cleanEventTitle(subject);
         const category = this.inferCategory(title);
         const prio = this.inferPriority(category);
         events.push({
@@ -1875,9 +1917,10 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
       const [sh, sm] = (e.startTime || '09:00').split(':').map(Number);
       const defaultEnd = `${String((sh + 1) % 24).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`;
 
+      const title = this.cleanEventTitle(e.title || '');
       return {
         id: e.id || ('evt_' + Math.random().toString(36).substr(2, 9)),
-        title: e.title || 'Scheduled Activity',
+        title: title || 'Scheduled Activity',
         date: e.date || fallbackDate || this.formatDateISO(new Date()),
         startTime: e.startTime || '09:00',
         endTime: e.endTime || defaultEnd,

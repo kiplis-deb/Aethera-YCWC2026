@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <link rel="stylesheet" href="css/style.css?v=4.2.0">
   <link rel="stylesheet" href="css/components.css?v=4.2.0">
-  <link rel="stylesheet" href="css/calendar.css?v=4.0.5">
+  <link rel="stylesheet" href="css/calendar.css?v=4.2.5">
   <link rel="stylesheet" href="css/chatbot.css?v=4.0.6">
   <link rel="stylesheet" href="css/quick-access.css?v=4.0.5">
   <link rel="stylesheet" href="css/i18n.css?v=4.0.5">
@@ -400,9 +400,6 @@
 
     </aside>
 
-    <!-- Mobile Drawer Backdrop Overlay -->
-    <div id="cal-drawer-backdrop" class="cal-drawer-backdrop" aria-hidden="true"></div>
-
     <!-- Center Main Calendar Canvas -->
     <main class="cal-main-content">
 
@@ -564,6 +561,9 @@
     </aside>
 
   </div>
+
+  <!-- Mobile Drawer Backdrop Overlay (Positioned outside workspace grid to prevent grid column allocation) -->
+  <div id="cal-drawer-backdrop" class="cal-drawer-backdrop" aria-hidden="true"></div>
 
   <!-- ==========================================================================
        MODAL 1: ADD / EDIT CALENDAR EVENT
@@ -913,8 +913,8 @@
   <script src="js/background-engine.js?v=4.1.4"></script>
   <script src="js/user-db.js?v=4.0.7"></script>
   <script src="js/i18n.js?v=1.0.0"></script>
-  <script src="js/calendar.js?v=4.0.8"></script>
-  <script src="js/chatbot.js?v=4.0.7"></script>
+  <script src="js/calendar.js?v=4.2.5"></script>
+  <script src="js/chatbot.js?v=4.2.5"></script>
   <script src="js/quick-access.js?v=4.0.5"></script>
 </body>
 

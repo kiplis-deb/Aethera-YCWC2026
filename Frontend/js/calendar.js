@@ -366,6 +366,7 @@ class AetheraCalendarApp {
     const headerAiPlanBtn = document.getElementById('cal-header-ai-plan-btn');
 
     const openDrawer = () => {
+      if (window.innerWidth > 768) return;
       if (sidebar) sidebar.classList.add('mobile-drawer-open');
       if (backdrop) backdrop.classList.add('is-open');
       document.body.style.overflow = 'hidden';
@@ -376,6 +377,12 @@ class AetheraCalendarApp {
       if (backdrop) backdrop.classList.remove('is-open');
       document.body.style.overflow = '';
     };
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) {
+        closeDrawer();
+      }
+    });
 
     menuBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1842,10 +1849,41 @@ class AetheraCalendarApp {
 
   closeAIModal() {
     const modal = document.getElementById('cal-ai-review-modal');
-    if (!modal) return;
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
+    if (modal) {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
     this.parsedAIEvents = [];
+  }
+
+  extractScheduleSubject(query) {
+    if (!query) return '';
+    let s = query.trim();
+    s = s.replace(/^(hey|hi|hello|halo|tolong|please|can you(?: please)?|could you(?: please)?|would you(?: please)?|i want you to|i need you to|i want to|i need to|help me)\b\s*/gi, '');
+    s = s.replace(/\b(make|create|set\s+up|set|build|put|add|organize|generate|draft)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?(?:schedule|calendar|plan|agenda|timeline|time\s*table|to-?do)\b/gi, '');
+    s = s.replace(/\b(schedule|plan)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?/gi, '');
+    s = s.replace(/\b(?:tolong\s+)?(?:buatkan|buat|bikin|jadwalkan|rencanakan|masukkan\s+ke)\s*(?:saya\s+)?(?:jadwal|agenda|rencana|kalender)?\b/gi, '');
+    s = s.replace(/\b(to|on|in|into)\s+(?:my\s+|the\s+)?calendar\b/gi, '');
+    s = s.replace(/\b(ke|di|pada)\s+(?:kalender|jadwal)\s*(?:saya)?\b/gi, '');
+    s = s.replace(/\b(today|tonight|tomorrow|tommorow|tomorow|tmrw|tmr|yesterday|the\s+day\s+after\s+tomorrow|next\s+week|this\s+week|this\s+weekend)\b/gi, '');
+    s = s.replace(/\b(hari\s+ini|malam\s+ini|besok|lusa|minggu\s+depan|akhir\s+pekan\s+ini)\b/gi, '');
+    s = s.replace(/\b(?:on|this|next)?\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '');
+    s = s.replace(/\b(?:hari)?\s*(?:senin|selasa|rabu|kamis|jumat|sabtu|minggu)\b/gi, '');
+    s = s.replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?\b/gi, '');
+    s = s.replace(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/gi, '');
+    s = s.replace(/(?:from\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:-|–|—|to|until|sampai)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '');
+    s = s.replace(/(?:at|around|pada|jam|pukul)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '');
+    s = s.replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, '');
+    s = s.replace(/^[\s,;:–—\-_/|*•#]+/g, '');
+    s = s.replace(/[\s,;:–—\-_/|*•#?!.]+$/g, '');
+    s = s.replace(/^(?:for|about|regarding|to|on|at|of|with|untuk|tentang|soal|buat)\s+/i, '');
+    s = s.replace(/^(?:meeting|session|call|event|review)\s+(?:for|about|with|on)\s+/i, '');
+    s = s.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
+    if (!s) return '';
+    return s.split(/\s+/)
+      .filter(w => w.length > 0)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
   }
 
   parseUserPromptToScheduleEvents(promptText, targetDate = null) {
@@ -1956,10 +1994,15 @@ class AetheraCalendarApp {
       }
 
       // Clean title text thoroughly
+      const extractedSubject = this.extractScheduleSubject(title);
+      if (extractedSubject && extractedSubject.length >= 2) {
+        title = extractedSubject;
+      }
+
       for (let i = 0; i < 3; i++) {
         title = title
           .replace(/^(?:and\s+|dan\s+|then\s+|lalu\s+)/i, '')
-          .replace(/^(?:i\s+have\s+(?:a\s+)?|i\s+need\s+(?:to\s+)?|i\s+want\s+(?:to\s+)?|need\s+(?:to\s+)?|schedule\s+(?:a\s+)?|plan\s+(?:a\s+)?|ada\s+(?:acara\s+|rapat\s+)?|harus\s+|mau\s+|perlu\s+|jadwal(?:kan)?\s+)/i, '')
+          .replace(/^(?:make\s+(?:me\s+)?(?:a\s+)?(?:schedule|plan)\s+(?:for|to|on)?|create\s+(?:a\s+)?(?:schedule|plan)\s+(?:for|to|on)?|schedule\s+(?:a\s+)?|plan\s+(?:a\s+)?|i\s+have\s+(?:a\s+)?|i\s+need\s+(?:to\s+)?|i\s+want\s+(?:to\s+)?|need\s+(?:to\s+)?|ada\s+(?:acara\s+|rapat\s+)?|harus\s+|mau\s+|perlu\s+|jadwal(?:kan)?\s+)/i, '')
           .replace(/^(?:at|on|for|pada|jam|dari|untuk|–|-|:)\s*/i, '')
           .replace(/[\s,–\-:]*(?:from|at|on|for|due|pada|jam|dari|untuk)$/i, '')
           .replace(/^[\s*•\-\d.)|:]+/, '')
