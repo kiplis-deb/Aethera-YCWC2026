@@ -1546,7 +1546,7 @@
   display: inline-block;
   white-space: nowrap;
   vertical-align: baseline;
-  font-family: 'Speed Rusher', var(--font-display), sans-serif;
+  font-family: 'Speed Rusher', 'SpeedRusher', var(--font-display), sans-serif;
   font-size: clamp(1.15rem, 1.8vw, 1.55rem);
   letter-spacing: 0.02em;
   color: var(--text-primary);
