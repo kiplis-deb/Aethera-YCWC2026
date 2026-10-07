@@ -9,10 +9,11 @@ const DEFAULT_GEMINI_API_KEY = '';
 class AetheraStudio {
   constructor() {
     this.defaultKey = DEFAULT_GEMINI_API_KEY;
+    this.defaultKey = DEFAULT_GEMINI_API_KEY;
     this.apiKey = localStorage.getItem('aethera_gemini_api_key') || this.defaultKey;
-    this.isServerProxyActive = true;
+    this.isServerProxyActive = false;
     let storedModel = localStorage.getItem('aethera_selected_model') || 'gemini-flash-lite-latest';
-    if (!storedModel || storedModel.includes('2.0') || storedModel.includes('1.5') || storedModel.includes('2.5') || storedModel.includes('3.5') || storedModel.includes('3.8')) {
+    if (!storedModel || storedModel.includes('3.6') || storedModel.includes('3.1') || storedModel.includes('3.5') || storedModel.includes('3.8')) {
       storedModel = 'gemini-flash-lite-latest';
       localStorage.setItem('aethera_selected_model', 'gemini-flash-lite-latest');
     }
@@ -628,11 +629,27 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
       };
     });
 
-    const payload = {
-      system_instruction: {
+    const activeKey = this.getApiKey();
+    const hasValidKey = this.hasValidCloudKey() || (typeof activeKey === 'string' && activeKey.length >= 15);
+
+    // If no key configured and server proxy is not active, present auth card right away (no fake local simulation)
+    if (!hasValidKey && !this.isServerProxyActive) {
+      this.isGenerating = false;
+      const runBtnText = document.getElementById('run-btn-text');
+      if (runBtnText) runBtnText.textContent = "Run AI";
+      this.renderAuthErrorCard(aiBubble, promptText, attachedImage, toolData, {
+        status: 401,
+        errorMsg: 'Google AI Studio API key required. Please enter your API key to connect live Gemini AI reasoning:'
+      });
+      return;
+    }
+
+    const requestBody = {
+      model: this.getModel(),
+      contents: recentHistory,
+      systemInstruction: {
         parts: [{ text: systemInstructionText }]
       },
-      contents: recentHistory,
       generationConfig: {
         maxOutputTokens: 3072,
         temperature: 0.7
@@ -642,174 +659,238 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
     let generatedText = "";
     const contentEl = aiBubble.querySelector('.ai-stream-content');
     const timeTag = aiBubble.querySelector('.status-tag');
-
     const backend = this.getBackendUrl() || 'http://localhost:3000';
-    const activeKey = this.getApiKey();
-    this.streamEndpoint = this.getStreamEndpoint();
-    this.modelEndpoint = this.getModelEndpoint();
+    let streamSucceeded = false;
+    let lastErrorStatus = 0;
+    let lastErrorMessage = '';
 
     try {
       // 1. Primary: Server-Side Streaming AI Proxy (Instant Sub-Second Streaming)
-      let response = null;
-      try {
-        const streamUrl = `${backend}/api/ai/stream`;
-        response = await fetch(streamUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, model: this.selectedModel })
-        });
-      } catch (streamFetchErr) {
-        console.warn('[AetheraStudio] Server stream unreachable:', streamFetchErr.message);
-      }
-      if (response && !response.ok) {
-        console.warn('[AetheraStudio] Server stream returned HTTP', response.status);
-      }
-
-      // 2. Direct Google AI stream fallback if server stream didn't respond 200
-      if ((!response || !response.ok) && activeKey) {
+      if (this.isServerProxyActive) {
         try {
-          const directStreamUrl = `${this.streamEndpoint}&key=${encodeURIComponent(activeKey)}`;
-          const directResp = await fetch(directStreamUrl, {
+          const streamUrl = `${backend}/api/ai/stream`;
+          const response = await fetch(streamUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...payload, model: this.selectedModel })
+            body: JSON.stringify(requestBody)
           });
-          if (directResp && directResp.ok) {
-            response = directResp;
-          }
-        } catch (_) {}
-      }
 
-      if (response && response.ok) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = "";
-        let renderScheduled = false;
+          if (response && response.ok) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = "";
+            let renderScheduled = false;
 
-        const updateRender = () => {
-          renderScheduled = false;
-          if (contentEl && generatedText) {
-            contentEl.innerHTML = this.formatMarkdown(generatedText);
-          }
-          if (timeTag) {
-            timeTag.textContent = "GENERATING...";
-          }
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-        };
+            const updateRender = () => {
+              renderScheduled = false;
+              if (contentEl && generatedText) {
+                contentEl.innerHTML = this.formatMarkdown(generatedText);
+              }
+              if (timeTag) timeTag.textContent = "GENERATING...";
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || "";
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || "";
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data:')) {
-              const jsonStr = trimmed.slice(5).trim();
-              if (jsonStr) {
-                try {
-                  const chunk = JSON.parse(jsonStr);
-                  if (chunk.candidates && chunk.candidates[0]?.content?.parts) {
-                    const chunkText = chunk.candidates[0].content.parts.map(p => p.text || '').join('');
-                    if (chunkText) {
-                      generatedText += chunkText;
-                      this.latestOutputText = generatedText;
-                      if (!renderScheduled) {
-                        renderScheduled = true;
-                        requestAnimationFrame(updateRender);
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data:')) {
+                  const jsonStr = trimmed.slice(5).trim();
+                  if (jsonStr) {
+                    try {
+                      const chunk = JSON.parse(jsonStr);
+                      if (chunk.error) {
+                        lastErrorMessage = chunk.error.message || 'Stream error';
                       }
-                    }
+                      if (chunk.candidates && chunk.candidates[0]?.content?.parts) {
+                        const chunkText = chunk.candidates[0].content.parts.map(p => p.text || '').join('');
+                        if (chunkText) {
+                          generatedText += chunkText;
+                          this.latestOutputText = generatedText;
+                          if (!renderScheduled) {
+                            renderScheduled = true;
+                            requestAnimationFrame(updateRender);
+                          }
+                        }
+                      }
+                    } catch (_) {}
                   }
-                } catch (e) {
-                  // Incomplete chunk
                 }
               }
             }
+
+            if (generatedText) {
+              streamSucceeded = true;
+              if (contentEl) contentEl.innerHTML = this.formatMarkdown(generatedText);
+            }
+          } else if (response) {
+            lastErrorStatus = response.status;
+            const errData = await response.json().catch(() => ({}));
+            lastErrorMessage = errData.error?.message || `Server proxy returned HTTP ${response.status}`;
           }
-        }
-        // Final render sync
-        if (contentEl && generatedText) {
-          contentEl.innerHTML = this.formatMarkdown(generatedText);
+        } catch (streamFetchErr) {
+          console.warn('[AetheraStudio] Server stream unreachable:', streamFetchErr.message);
+          lastErrorMessage = streamFetchErr.message;
         }
       }
 
+      // 2. Direct Google Gemini SSE stream if server stream didn't succeed and client has key
+      if (!streamSucceeded && activeKey) {
+        try {
+          const directStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.getModel()}:streamGenerateContent?alt=sse&key=${encodeURIComponent(activeKey)}`;
+          const directResp = await fetch(directStreamUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+
+          if (directResp && directResp.ok) {
+            const reader = directResp.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = "";
+            let renderScheduled = false;
+
+            const updateRender = () => {
+              renderScheduled = false;
+              if (contentEl && generatedText) {
+                contentEl.innerHTML = this.formatMarkdown(generatedText);
+              }
+              if (timeTag) timeTag.textContent = "GENERATING...";
+              chatContainer.scrollTop = chatContainer.scrollHeight;
+            };
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data:')) {
+                  const jsonStr = trimmed.slice(5).trim();
+                  if (jsonStr) {
+                    try {
+                      const chunk = JSON.parse(jsonStr);
+                      if (chunk.candidates && chunk.candidates[0]?.content?.parts) {
+                        const chunkText = chunk.candidates[0].content.parts.map(p => p.text || '').join('');
+                        if (chunkText) {
+                          generatedText += chunkText;
+                          this.latestOutputText = generatedText;
+                          if (!renderScheduled) {
+                            renderScheduled = true;
+                            requestAnimationFrame(updateRender);
+                          }
+                        }
+                      }
+                    } catch (_) {}
+                  }
+                }
+              }
+            }
+
+            if (generatedText) {
+              streamSucceeded = true;
+              if (contentEl) contentEl.innerHTML = this.formatMarkdown(generatedText);
+            }
+          } else if (directResp) {
+            lastErrorStatus = directResp.status;
+            const errData = await directResp.json().catch(() => ({}));
+            lastErrorMessage = errData.error?.message || `Google API returned HTTP ${directResp.status}`;
+          }
+        } catch (directStreamErr) {
+          console.warn('[AetheraStudio] Direct stream notice:', directStreamErr.message);
+          lastErrorMessage = directStreamErr.message;
+        }
+      }
+
+      // 3. Fallback: Standard generateContent via server proxy or direct Google API
+      if (!streamSucceeded) {
+        let response = null;
+        if (this.isServerProxyActive) {
+          try {
+            response = await fetch(`${backend}/api/ai/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody)
+            });
+            if (response && response.ok) {
+              const bData = await response.json();
+              if (bData.candidates && bData.candidates[0]?.content?.parts) {
+                generatedText = bData.candidates[0].content.parts.map(p => p.text || '').join('\n');
+              }
+            } else if (response) {
+              lastErrorStatus = response.status;
+              const errData = await response.json().catch(() => ({}));
+              lastErrorMessage = errData.error?.message || `Server proxy HTTP ${response.status}`;
+            }
+          } catch (_) {}
+        }
+
+        // Direct generateContent with candidate models
+        if (!generatedText && activeKey) {
+          const candidateModels = [this.getModel(), 'gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+          const tried = new Set();
+          for (const m of candidateModels) {
+            if (tried.has(m)) continue;
+            tried.add(m);
+            try {
+              const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(activeKey)}`;
+              const directRes = await fetch(directUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+              });
+
+              if (directRes.ok) {
+                const fbData = await directRes.json();
+                if (fbData.candidates && fbData.candidates[0]?.content?.parts) {
+                  generatedText = fbData.candidates[0].content.parts.map(p => p.text || '').join('\n');
+                  break;
+                }
+              } else {
+                lastErrorStatus = directRes.status;
+                const errData = await directRes.json().catch(() => ({}));
+                lastErrorMessage = errData.error?.message || `Google API HTTP ${directRes.status}`;
+              }
+            } catch (mErr) {
+              lastErrorMessage = mErr.message;
+            }
+          }
+        }
+      }
+
+      // Check final generated text
       if (generatedText) {
         this.chatHistory.push({ role: "model", parts: [{ text: generatedText }] });
+        this.latestOutputText = generatedText;
+        if (contentEl) contentEl.innerHTML = this.formatMarkdown(generatedText);
         if (timeTag) timeTag.textContent = `COMPLETED // ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
         this.attachSaveToDBButton(aiBubble, promptText, generatedText);
         this.attachCalendarIntegration(aiBubble, promptText, generatedText);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
         return;
       }
 
-      // 3. Fallback: Server-side generateContent (protected & reliable)
-      if (backend) {
-        try {
-          const backendRes = await fetch(`${backend}/api/ai/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...payload, model: this.selectedModel || 'gemini-flash-lite-latest' })
-          });
-          if (backendRes.ok) {
-            const bData = await backendRes.json();
-            if (bData.candidates && bData.candidates[0]?.content?.parts) {
-              generatedText = bData.candidates[0].content.parts.map(p => p.text).join('\n');
-              this.chatHistory.push({ role: "model", parts: [{ text: generatedText }] });
-              this.latestOutputText = generatedText;
-              if (contentEl) contentEl.innerHTML = this.formatMarkdown(generatedText);
-              if (timeTag) timeTag.textContent = `COMPLETED // ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-              this.attachSaveToDBButton(aiBubble, promptText, generatedText);
-              this.attachCalendarIntegration(aiBubble, promptText, generatedText);
-              chatContainer.scrollTop = chatContainer.scrollHeight;
-              return;
-            }
-          }
-        } catch (_) {}
-      }
-
-      // 4. Fallback: Direct generateContent with ultra-fast candidate models
-      const candidateModels = ['gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.6-flash'];
-      for (const m of candidateModels) {
-        try {
-          const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(activeKey)}`;
-          const directRes = await fetch(directUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (directRes.ok) {
-            const fbData = await directRes.json();
-            if (fbData.candidates && fbData.candidates[0]?.content?.parts) {
-              generatedText = fbData.candidates[0].content.parts.map(p => p.text).join('\n');
-              this.chatHistory.push({ role: "model", parts: [{ text: generatedText }] });
-              this.latestOutputText = generatedText;
-              if (contentEl) contentEl.innerHTML = this.formatMarkdown(generatedText);
-              if (timeTag) timeTag.textContent = `COMPLETED // ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-              this.attachSaveToDBButton(aiBubble, promptText, generatedText);
-              this.attachCalendarIntegration(aiBubble, promptText, generatedText);
-              chatContainer.scrollTop = chatContainer.scrollHeight;
-              return;
-            }
-          }
-        } catch (mErr) {
-          // Continue to next model
-        }
-      }
-
-      // If all cloud attempts fail, run built-in neural simulation seamlessly
-      this.runSimulatedResponse(aiBubble, promptText, attachedImage, toolData, {
-        mode: 'builtin-instant',
-        notice: 'Aethera Built-in Neural Engine active.'
+      // If all cloud attempts fail, show Auth Error Card right away (NO FAKE / SIMULATED LOCAL REASONING)
+      this.renderAuthErrorCard(aiBubble, promptText, attachedImage, toolData, {
+        status: lastErrorStatus || 401,
+        errorMsg: lastErrorMessage || 'Google Gemini API request failed. Please verify your API key or paste a new key below:'
       });
 
     } catch (err) {
-      console.warn('[AetheraStudio Inference Catch]', err);
-      this.runSimulatedResponse(aiBubble, promptText, attachedImage, toolData, {
-        mode: 'builtin-instant',
-        notice: 'Aethera Built-in Neural Engine active.'
+      console.warn('[AetheraStudio Inference Error]', err);
+      this.renderAuthErrorCard(aiBubble, promptText, attachedImage, toolData, {
+        status: 0,
+        errorMsg: err.message || 'Network error connecting to Gemini API.'
       });
     } finally {
       this.isGenerating = false;
@@ -868,13 +949,21 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
     this.updateApiKeyButtonState();
   }
 
+  getModel() {
+    let m = localStorage.getItem('aethera_selected_model') || this.selectedModel || 'gemini-flash-lite-latest';
+    if (!m || m.includes('3.6') || m.includes('3.1') || m.includes('3.5') || m.includes('3.8')) {
+      m = 'gemini-flash-lite-latest';
+    }
+    return m;
+  }
+
   getStreamEndpoint(model = null) {
-    const m = model || this.selectedModel || 'gemini-3.6-flash';
+    const m = model || this.getModel();
     return `https://generativelanguage.googleapis.com/v1beta/models/${m}:streamGenerateContent?alt=sse`;
   }
 
   getModelEndpoint(model = null) {
-    const m = model || this.selectedModel || 'gemini-3.6-flash';
+    const m = model || this.getModel();
     return `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
   }
 
@@ -884,20 +973,21 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
     const statusVal = document.getElementById('studio-api-status-val');
     const hasCustomKey = this.hasValidCloudKey();
     if (dot) dot.classList.toggle('active', hasCustomKey);
-    if (label) label.textContent = hasCustomKey ? 'API Key (Active)' : 'API Key';
+    if (label) label.textContent = hasCustomKey ? 'API Key (Active)' : 'Connect API Key';
     if (statusVal) {
       if (hasCustomKey) {
         statusVal.textContent = 'CONNECTED // LIVE CLOUD';
         statusVal.style.color = '#10B981';
       } else {
-        statusVal.textContent = 'READY // LOCAL SIM';
-        statusVal.style.color = 'var(--accent-cyan, #06B6D4)';
+        statusVal.textContent = 'KEY REQUIRED';
+        statusVal.style.color = '#F59E0B';
       }
     }
   }
 
   initApiKeyManager() {
     const configBtn = document.getElementById('api-key-config-btn');
+    const statusBtn = document.getElementById('studio-status-item-btn');
     const modal = document.getElementById('api-key-modal');
     const closeBtn = document.getElementById('api-key-modal-close');
     const input = document.getElementById('user-gemini-key-input');
@@ -909,15 +999,18 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
 
     this.updateApiKeyButtonState();
 
-    if (configBtn && modal) {
-      configBtn.addEventListener('click', () => {
-        if (input) input.value = this.getApiKey();
-        if (modelSelect) modelSelect.value = this.selectedModel;
-        if (statusDiv) statusDiv.style.display = 'none';
+    const openModal = () => {
+      if (input) input.value = this.getApiKey();
+      if (modelSelect) modelSelect.value = this.getModel();
+      if (statusDiv) statusDiv.style.display = 'none';
+      if (modal) {
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
-      });
-    }
+      }
+    };
+
+    if (configBtn) configBtn.addEventListener('click', openModal);
+    if (statusBtn) statusBtn.addEventListener('click', openModal);
 
     const closeModal = () => {
       if (modal) {
@@ -1055,56 +1148,65 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
     }
   }
 
-  renderAuthErrorCard(aiBubble, promptText, attachedImage, toolData, errorMsg) {
+  renderAuthErrorCard(aiBubble, promptText, attachedImage, toolData, options = {}) {
     const contentEl = aiBubble.querySelector('.ai-stream-content');
     const timeTag = aiBubble.querySelector('.status-tag');
-    if (timeTag) timeTag.textContent = 'KEY CONFIG REQUIRED';
+    if (timeTag) timeTag.textContent = 'API KEY REQUIRED';
 
     if (!contentEl) return;
+    const status = options.status || 401;
+    const rawError = options.errorMsg || '';
+    const isAuth = status === 401 || status === 403 || status === 400 || rawError.includes('401') || rawError.includes('403') || rawError.toLowerCase().includes('credential') || rawError.toLowerCase().includes('key');
+    const isQuota = status === 429 || rawError.includes('429');
+
+    const badgeText = isQuota ? 'QUOTA LIMIT // HTTP 429' : (isAuth ? 'GOOGLE GEMINI API KEY REQUIRED' : 'API CONNECTION ERROR');
+    const descText = isQuota
+      ? 'Google Gemini API free tier rate limit reached. Please wait a moment or enter a different Google AI Studio API key:'
+      : (rawError || 'Google AI Studio requires a valid Gemini API key to run live multimodal AI reasoning.');
+
     contentEl.innerHTML = `
-      <div class="api-auth-error-card">
-        <div class="auth-error-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>GEMINI API KEY REQUIRED // HTTP 401</span>
+      <div class="api-auth-error-card" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 12px; padding: 1.15rem; margin: 0.5rem 0;">
+        <div class="auth-error-badge" style="color: #F59E0B; display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>${badgeText}</span>
         </div>
-        <h4 class="auth-error-title">Google Gemini API Authorization Required</h4>
-        <p class="auth-error-desc">
-          Google returned <code>${this.escapeHtml(errorMsg || 'API error: 401')}</code>. To enable live multimodal cloud reasoning, enter your free Google AI Studio API key below, or run instantly with Aethera's built-in AI simulation engine.
+        <h4 class="auth-error-title" style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.35rem;">
+          ${isAuth ? 'Connect Google Gemini API Key' : 'API Connection Notice'}
+        </h4>
+        <p class="auth-error-desc" style="font-size: 0.82rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0.85rem;">
+          ${this.escapeHtml(descText)}
         </p>
-        <div class="auth-error-input-group">
-          <input type="password" class="auth-key-quick-input" placeholder="Paste your Google AI Studio API key (AIzaSy...)" value="">
-          <button type="button" class="btn btn-primary auth-save-key-btn" style="padding: 0.45rem 1.15rem; font-size: 0.8rem;">Save Key &amp; Retry</button>
+        <div class="auth-error-input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.65rem;">
+          <input type="password" class="auth-key-quick-input" placeholder="Paste your Google AI Studio API key (AIzaSy...)" value="" style="flex: 1; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.55rem 0.85rem; color: #fff; font-family: var(--font-mono); font-size: 16px;">
+          <button type="button" class="btn btn-primary auth-save-key-btn" style="padding: 0.55rem 1.15rem; font-size: 0.82rem; font-weight: 700; white-space: nowrap;">Connect Key &amp; Run</button>
         </div>
-        <div class="auth-error-actions">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" class="auth-get-key-link" title="Open Google AI Studio in new tab">
+        <div class="auth-error-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="auth-get-key-link" style="color: var(--accent-cyan, #06B6D4); font-size: 0.78rem; text-decoration: underline; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            <span>Get Free API Key from Google AI Studio</span>
+            <span>Get Free API Key from Google AI Studio &rarr;</span>
           </a>
-          <button type="button" class="auth-demo-btn">
-            <span>⚡ Run with Built-in AI Simulation</span>
-          </button>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Saved securely in your browser &amp; synced</span>
         </div>
       </div>
     `;
 
     const input = contentEl.querySelector('.auth-key-quick-input');
     const saveBtn = contentEl.querySelector('.auth-save-key-btn');
-    const demoBtn = contentEl.querySelector('.auth-demo-btn');
 
     if (saveBtn && input) {
       saveBtn.addEventListener('click', () => {
-        const key = input.value.trim();
-        if (!key) {
+        const raw = input.value;
+        const key = this.cleanApiKey(raw);
+        if (!key || key.length < 15) {
           alert('Please paste a valid Google Gemini API key (starts with AIzaSy...).');
           return;
         }
         this.setApiKey(key);
-        // Re-execute request with new key
-        const promptInput = document.getElementById('studio-prompt-input');
-        if (promptInput) promptInput.value = promptText;
-        this.currentImage = attachedImage;
-        aiBubble.remove();
-        this.executeAIRequest();
+        saveBtn.textContent = 'Connected! ✓';
+        setTimeout(() => {
+          aiBubble.remove();
+          this.runInference(promptText, attachedImage);
+        }, 500);
       });
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -1113,227 +1215,13 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
         }
       });
     }
-
-    if (demoBtn) {
-      demoBtn.addEventListener('click', () => {
-        this.runSimulatedResponse(aiBubble, promptText, attachedImage, toolData);
-      });
-    }
   }
 
   runSimulatedResponse(aiBubble, promptText, attachedImage, toolData, options = {}) {
-    const contentEl = aiBubble.querySelector('.ai-stream-content');
-    const timeTag = aiBubble.querySelector('.status-tag');
-    if (timeTag) timeTag.textContent = `AETHERA NEURAL // ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-
-    const simText = this.generateSimulatedResponse(this.activeToolKey, promptText, attachedImage);
-    this.latestOutputText = simText;
-    this.chatHistory.push({ role: "model", parts: [{ text: simText }] });
-
-    let bannerHtml = '';
-    if (options.mode === 'key-rejected') {
-      bannerHtml = `
-        <div class="ai-key-notice-banner warning">
-          <div class="key-notice-left">
-            <span class="key-notice-pill warning">API KEY 401</span>
-            <span>${options.notice || 'Google API key invalid. Switched to Built-in AI Reasoning Engine.'}</span>
-          </div>
-          <button type="button" class="key-notice-btn banner-open-key-modal">Update Key</button>
-        </div>
-      `;
-    } else if (options.mode === 'builtin-instant') {
-      bannerHtml = `
-        <div class="ai-key-notice-banner">
-          <div class="key-notice-left">
-            <span class="key-notice-pill">⚡ LOCAL REASONING</span>
-            <span>Instant neural engine active. To stream live from Google Gemini Flash, <a href="javascript:void(0)" class="open-api-modal-link banner-open-key-modal">connect your free API key</a>.</span>
-          </div>
-          <button type="button" class="key-notice-btn banner-open-key-modal">Connect Key</button>
-        </div>
-      `;
-    }
-
-    if (contentEl) {
-      contentEl.innerHTML = bannerHtml + this.formatMarkdown(simText);
-      const modalBtns = contentEl.querySelectorAll('.banner-open-key-modal');
-      modalBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.getElementById('api-key-config-btn')?.click();
-        });
-      });
-    }
-
-    this.attachSaveToDBButton(aiBubble, promptText, simText);
-    this.attachCalendarIntegration(aiBubble, promptText, simText);
-  }
-
-  generateSimulatedResponse(toolKey, promptText, attachedImage) {
-    const p = (promptText || '').toLowerCase();
-    
-    if (toolKey === 'chatbot') {
-      const cleanP = (promptText || '').trim();
-      if (!cleanP) {
-        return `Hey there! 😊 What's on your mind today? Feel free to ask anything, chat about how your day went, or bounce some thoughts around!`;
-      }
-      return `Hey! So about **"${cleanP.length > 55 ? cleanP.slice(0, 55) + '...' : cleanP}"**:
-
-I totally hear you! Honestly, taking things one step at a time is usually the best way to handle it. 
-
-How are you feeling about it, or what direction do you want to explore next? I'm right here with you! 😊`;
-    }
-
-    if (toolKey === 'task-planner' || p.includes('schedule') || p.includes('plan') || p.includes('todo')) {
-      const today = new Date().toISOString().split('T')[0];
-      return `# Daily Schedule & Productivity Plan // ${today}
-
-## 1. Eisenhower Priority Matrix
-- **Q1: Urgent & Important (Do First)**
-  - Critical production issue triage & immediate client responses
-  - High-priority deadline deliverables for current milestone
-- **Q2: Important, Not Urgent (Schedule Deep Focus)**
-  - Core system architecture design & database query optimization
-  - Reading technical documentation & skill development (90 min)
-- **Q3: Urgent, Not Important (Delegate / Batch)**
-  - Daily engineering standup & alignment sync (30 min)
-  - Quick Slack messages & stakeholder status updates
-- **Q4: Neither (Eliminate / Low Energy)**
-  - Inbox clearing & weekly backlog clean-up
-
-## 2. Time-Blocked Schedule
-- **09:00 - 10:30** | Q2: Core Architecture & Focused Deep Work (Focus Mode)
-- **10:45 - 11:30** | Q1: Production Bug Triage & Critical Patch Review
-- **11:30 - 12:30** | Q3: Team Sync & Engineering Standup
-- **13:30 - 15:00** | Q2: Database Schema Index Tuning & Backend Refactor
-- **15:30 - 16:30** | Q4: Inbox Zero & Weekly Retrospective Cleanup
-- **17:00 - 18:00** | Personal Health & Fitness Session
-
-## 3. Top 3 Non-Negotiable Wins
-1. Complete critical production patch review
-2. Finalize architecture spec for database migration
-3. Unblock frontend and backend cross-team dependencies`;
-    }
-
-    if (toolKey === 'math-solver' || p.includes('integral') || p.includes('matrix') || p.includes('equation')) {
-      return `### Mathematical Solution & Step-by-Step Proof
-
-**Problem Statement:**
-$$\\int_{0}^{\\infty} x^2 e^{-x^2} \\, dx$$
-
-**Step 1: Integration by Parts Setup**
-Let $u = x$ and $dv = x e^{-x^2} dx$.
-Then:
-$$du = dx, \\quad v = -\\frac{1}{2} e^{-x^2}$$
-
-**Step 2: Applying the Integration by Parts Formula:**
-$$\\int u \\, dv = u v - \\int v \\, du$$
-$$\\int_{0}^{\\infty} x^2 e^{-x^2} \\, dx = \\left[ -\\frac{x}{2} e^{-x^2} \\right]_{0}^{\\infty} + \\frac{1}{2} \\int_{0}^{\\infty} e^{-x^2} \\, dx$$
-
-**Step 3: Boundary Evaluation & Gaussian Integral:**
-As $x \\to \\infty$, by L'Hôpital's rule $\\lim_{x \\to \\infty} \\frac{x}{e^{x^2}} = 0$.
-At $x = 0$, $-\\frac{0}{2} = 0$. Thus the boundary term vanishes:
-$$\\left[ -\\frac{x}{2} e^{-x^2} \\right]_{0}^{\\infty} = 0$$
-
-Using the known Gaussian integral $\\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$:
-$$\\int_{0}^{\\infty} x^2 e^{-x^2} \\, dx = 0 + \\frac{1}{2} \\left( \\frac{\\sqrt{\\pi}}{2} \\right) = \\frac{\\sqrt{\\pi}}{4}$$
-
-**Final Boxed Answer:**
-$$\\boxed{\\int_{0}^{\\infty} x^2 e^{-x^2} \\, dx = \\frac{\\sqrt{\\pi}}{4} \\approx 0.4431}$$`;
-    }
-
-    if (toolKey === 'email-drafter' || p.includes('email') || p.includes('letter')) {
-      return `### Professional Executive Email Draft
-
-**Subject Options:**
-1. Update: Strategic Progress & Next Milestones for Q3
-2. Action Required: Project Timeline & Deliverables Review
-3. Follow-up: Summary of Key Takeaways and Next Steps
-
----
-
-**Email Body:**
-
-Dear Team / Colleague,
-
-I hope this message finds you well.
-
-I wanted to provide a concise update regarding our current progress on the initiative. Over the past week, we have made substantial headways across our core deliverables:
-
-- **Key Milestone Achieved:** Successfully finalized the initial technical review and addressed primary blockers.
-- **Next Priority:** Moving into implementation phase with target completion scheduled for next Friday.
-- **Required Action:** Please review the attached summary document by Wednesday at 3:00 PM and let me know if you have any questions or recommended adjustments.
-
-Thank you for your continued dedication and collaboration. Please let me know if you would like to schedule a brief 10-minute sync.
-
-Best regards,  
-[Your Name]  
-*Aethera Operations*
-
----
-
-**Direct / Concise Tone Alternative:**
-> "Hi Team — Quick update on project milestones: core review is complete, implementation is underway, and target delivery is next Friday. Please review the attached summary by Wednesday 3 PM. Let me know if any blockers arise. Thanks!"`;
-    }
-
-    if (toolKey === 'code-debugger' || toolKey === 'bug-hunter' || p.includes('code') || p.includes('bug') || p.includes('error')) {
-      return `### Root Cause Diagnostic & Code Fix
-
-**Diagnostic Summary:**
-The issue occurs due to asynchronous race condition or unhandled null reference during state updates.
-
-**Corrected Implementation:**
-\`\`\`javascript
-// Optimized implementation with error boundaries and state protection
-async function handleDataStream(source) {
-  if (!source) {
-    throw new Error('Invalid data source provided');
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-    const response = await fetch(source, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(\`HTTP error \${response.status}: \${response.statusText}\`);
-    }
-
-    const payload = await response.json();
-    return { success: true, data: payload };
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      console.warn('Network request timed out after 8000ms');
-    }
-    return { success: false, error: err.message };
-  }
-}
-\`\`\`
-
-**Key Optimizations Applied:**
-1. Added defensive argument validation against \`null\`/\`undefined\` inputs.
-2. Implemented \`AbortController\` timeout preventing hanging promises.
-3. Structured return signature \`{ success, data/error }\` for robust error handling.`;
-    }
-
-    // Default general response
-    return `### Aethera Cortex Synthesis // ${(AETHERA_DATA.tools[toolKey]?.title || 'Assistant')}
-
-**Analysis & Key Takeaways:**
-Based on your inquiry, here is a structured synthesis tailored to your objective:
-
-1. **Primary Insight:**
-   Addressing "${(promptText ? promptText.slice(0, 50) + '...' : 'your request')}" requires prioritizing high-impact action items while mitigating operational bottlenecks.
-
-2. **Actionable Steps:**
-   - **Phase 1 (Immediate):** Formulate concrete specifications and establish clean boundaries.
-   - **Phase 2 (Execution):** Implement solution iteratively with automated verification checks.
-   - **Phase 3 (Review):** Consolidate feedback and deploy optimizations.
-
-3. **Strategic Recommendation:**
-   Maintain modularity and keep dependencies minimal to ensure performance and reliability.
-
-*Note: Running in Aethera Built-in Simulation Mode. To enable live multimodal Gemini 2.5 Flash reasoning, configure your free Google AI Studio API key in the header.*`;
+    this.renderAuthErrorCard(aiBubble, promptText, attachedImage, toolData, {
+      status: 401,
+      errorMsg: options.notice || 'Google Gemini API key required. Local reasoning has been disabled in favor of live cloud API reasoning.'
+    });
   }
 
   attachSaveToDBButton(aiBubble, promptText, responseText) {

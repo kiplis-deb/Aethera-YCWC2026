@@ -125,8 +125,18 @@
     </div>
 
     <div class="studio-header-right">
+      <!-- API Key Modal Launcher -->
+      <button id="api-key-config-btn" class="btn btn-secondary" title="Configure Google Gemini API Key" type="button"
+        style="padding: 0.35rem 0.75rem; font-size: 0.8rem; height: 32px; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
+        <span class="key-status-dot"></span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 2l-2 2m-1.5 1.5L16 7l-2-2-1.5 1.5 2 2L13 10l-1.5-1.5-2 2 1.5 1.5L9 14l-2-2L2 17l5 5 5-5-2-2 2-2 1.5 1.5L15 13l-1.5-1.5 2-2 1.5 1.5 1.5-1.5-2-2 1.5-1.5z"/>
+        </svg>
+        <span id="api-key-btn-label">API Key</span>
+      </button>
+
       <!-- API Status HUD -->
-      <div class="studio-status-item">
+      <div class="studio-status-item" id="studio-status-item-btn" role="button" tabindex="0" title="Click to configure API Key" style="cursor: pointer;">
         <span style="color: var(--text-muted);" data-i18n="studio.api_status">API STATUS:</span>
         <span class="hud-value" style="color: var(--text-primary);" id="studio-api-status-val">CONNECTED // LIVE</span>
       </div>
@@ -657,10 +667,10 @@
           <label class="cal-form-label" for="user-gemini-model-select" data-i18n="studio.modal_model_lbl">Target Gemini
             Model</label>
           <select id="user-gemini-model-select" class="cal-form-input" style="width: 100%; box-sizing: border-box;">
-            <option value="gemini-flash-lite-latest" selected>Gemini Flash Lite (Recommended // Ultra-Low Latency &amp; Instant Speed)</option>
-            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (High Speed)</option>
-            <option value="gemini-3.6-flash">Gemini 3.6 Flash (Complex Reasoning)</option>
-            <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+            <option value="gemini-flash-lite-latest" selected>Gemini Flash Lite (Recommended // Ultra-Fast Latency)</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Deep Multimodal Reasoning)</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
           </select>
         </div>
 
