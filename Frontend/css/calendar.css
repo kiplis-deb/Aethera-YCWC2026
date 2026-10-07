@@ -2929,6 +2929,11 @@
     border: 1px solid var(--cal-glass-border);
   }
 
+  /* Prevent bottom dock collisions with calendar view dock */
+  #aethera-quick-access {
+    display: none !important;
+  }
+
   /* Modals: Safe Area & iOS Auto-Zoom Prevention */
   .cal-day-detail-card,
   .cal-modal-card {

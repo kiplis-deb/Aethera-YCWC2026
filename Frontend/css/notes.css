@@ -1484,6 +1484,11 @@ body.notes-body {
     background: rgba(168, 85, 247, 0.1);
   }
 
+  /* Prevent bottom dock collisions with notes mobile formatting bar */
+  #aethera-quick-access {
+    display: none !important;
+  }
+
   /* Prevent iOS zoom & optimize touch inputs */
   .block-content,
   .modal-search-input,
