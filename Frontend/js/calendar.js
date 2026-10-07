@@ -15,11 +15,11 @@ class AetheraCalendarApp {
 
     // Gemini API Configuration (Backend AI Proxy protects API key)
     this.defaultApiKey = "";
-    this.isServerProxyActive = true;
+    this.isServerProxyActive = false;
     this.apiKey = localStorage.getItem('aethera_gemini_api_key') || "";
-    this.selectedModel = localStorage.getItem('aethera_selected_model') || 'gemini-3.5-flash';
-    if (this.selectedModel.includes('2.5') || this.selectedModel.includes('2.0') || this.selectedModel.includes('1.5') || this.selectedModel.includes('3.8')) {
-      this.selectedModel = 'gemini-3.5-flash';
+    this.selectedModel = localStorage.getItem('aethera_selected_model') || 'gemini-flash-lite-latest';
+    if (this.selectedModel.includes('2.5') || this.selectedModel.includes('2.0') || this.selectedModel.includes('1.5') || this.selectedModel.includes('3.5') || this.selectedModel.includes('3.8')) {
+      this.selectedModel = 'gemini-flash-lite-latest';
     }
     this.modelEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.selectedModel}:generateContent`;
 
@@ -98,6 +98,7 @@ class AetheraCalendarApp {
     this.initURLParams();
     this.bindDOMEvents();
     this.initDayDetailModalEvents();
+    this.initSlashCommands();
 
     // Wait for database ready
     if (window.aetheraDB) {
@@ -1745,21 +1746,112 @@ class AetheraCalendarApp {
     this.parsedAIEvents = [];
   }
 
-  buildSimulatedScheduleText(promptText) {
-    const topic = (promptText || 'Primary Objectives').trim();
-    return `#### 1. TIME-BLOCKED SCHEDULE:
-- 09:00 - 11:30: Deep Work // High-priority execution & study
-- 11:30 - 12:30: Team & Client Sync // Status review
-- 13:30 - 15:00: Architecture & Core Focus // ${topic.substring(0, 40)}
-- 15:30 - 17:00: Deliverable Execution // Implementation review
-- 17:30 - 18:30: Personal Wellness // Recovery & reflection
+  parseUserPromptToScheduleEvents(promptText, targetDate = null) {
+    const text = (promptText || '').trim();
+    const dateStr = targetDate || this.selectedDate || new Date().toISOString().split('T')[0];
+    if (!text) return [];
 
-#### 2. EISENHOWER PRIORITY MATRIX:
-- Q1 (Urgent & Important): Deliverable Execution // Implementation review
-- Q2 (Important, Not Urgent): Deep Work // High-priority execution & study
-- Q2 (Important, Not Urgent): Architecture & Core Focus // ${topic.substring(0, 40)}
-- Q3 (Urgent, Not Important): Team & Client Sync // Status review
-- Q4 (Not Urgent, Not Important): Personal Wellness // Recovery & reflection`;
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const timeRangeRegex = /(?:jam\s*)?(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)\s*(?:-|–|—|sampai|to)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)/i;
+
+    const toStandardTime = (tStr, defaultHour = 9) => {
+      if (!tStr) return String(defaultHour).padStart(2, '0') + ':00';
+      let s = tStr.toLowerCase().trim().replace('jam', '').trim().replace('.', ':');
+      let isPm = s.includes('pm');
+      let isAm = s.includes('am');
+      s = s.replace(/am|pm/, '').trim();
+      let parts = s.split(':');
+      let h = parseInt(parts[0], 10);
+      let m = parts[1] ? parseInt(parts[1], 10) : 0;
+      if (isNaN(h)) h = defaultHour;
+      if (isNaN(m)) m = 0;
+      if (isPm && h < 12) h += 12;
+      if (isAm && h === 12) h = 0;
+      return String(Math.min(23, Math.max(0, h))).padStart(2, '0') + ':' + String(Math.min(59, Math.max(0, m))).padStart(2, '0');
+    };
+
+    const detectQuadrant = (title) => {
+      const l = (title || '').toLowerCase();
+      if (/urgent|critical|deadline|submit|due|exam|fix|cve|darurat|kritis|tenggat|ujian|perbaiki|bug/i.test(l)) {
+        return { priority: 'Q1', quadrant: 'Urgent & Important', category: 'deadline' };
+      }
+      if (/meet|sync|call|standup|discuss|client|demo|interview|rapat|temu|koordinasi|telepon|diskusi/i.test(l)) {
+        return { priority: 'Q3', quadrant: 'Urgent, Not Important', category: 'meeting' };
+      }
+      if (/gym|workout|break|lunch|dinner|rest|walk|recovery|sleep|santai|makan|istirahat|olahraga/i.test(l)) {
+        return { priority: 'Q4', quadrant: 'Not Urgent, Not Important', category: 'personal' };
+      }
+      if (/study|belajar|baca|math|calculus|physics|course|kelas|tugas|homework|kuliah/i.test(l)) {
+        return { priority: 'Q2', quadrant: 'Important, Not Urgent', category: 'study' };
+      }
+      return { priority: 'Q2', quadrant: 'Important, Not Urgent', category: 'deep-work' };
+    };
+
+    let rawTasks = [];
+    if (lines.length > 1) {
+      rawTasks = lines;
+    } else {
+      rawTasks = text.split(/;|\n|(?<=[a-zA-Z0-9]),\s*(?=[a-zA-Z0-9])|\band\s+then\b|\blalu\b|\bkemudian\b/i).map(s => s.trim()).filter(Boolean);
+    }
+
+    let baseHour = 9;
+    let baseMin = 0;
+    const events = [];
+
+    for (let raw of rawTasks) {
+      const timeMatch = raw.match(timeRangeRegex);
+      let title = raw;
+      let startTime = '';
+      let endTime = '';
+
+      if (timeMatch) {
+        startTime = toStandardTime(timeMatch[1], baseHour);
+        endTime = toStandardTime(timeMatch[2], baseHour + 1);
+        title = raw.replace(timeMatch[0], '').replace(/^(?:at|pada|jam|dari|from|–|-|:)\s*/i, '').replace(/[–\-:]\s*$/, '').trim();
+      } else {
+        startTime = String(baseHour).padStart(2, '0') + ':' + String(baseMin).padStart(2, '0');
+        let endH = baseHour + 1;
+        let endM = (baseMin + 30) % 60;
+        if (baseMin + 30 >= 60) endH++;
+        endTime = String(endH).padStart(2, '0') + ':' + String(endM).padStart(2, '0');
+        baseHour = endH;
+        baseMin = (endM + 15) % 60;
+        if (endM + 15 >= 60) baseHour++;
+        if (baseHour >= 22) baseHour = 9;
+      }
+
+      title = title.replace(/^[\s*•\-\d.)|:]+/, '').trim();
+      if (!title) title = 'Focus Session';
+
+      const quad = detectQuadrant(title);
+      events.push({
+        id: 'evt_' + Math.random().toString(36).substr(2, 9),
+        title,
+        date: dateStr,
+        startTime,
+        endTime,
+        category: quad.category,
+        priority: quad.priority,
+        quadrant: quad.quadrant,
+        notes: 'Generated from Schedule & Task Planner AI',
+        completed: false,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    return events;
+  }
+
+  buildSimulatedScheduleText(promptText, targetDate = null) {
+    const events = this.parseUserPromptToScheduleEvents(promptText, targetDate);
+    if (!events || events.length === 0) {
+      return `#### 1. TIME-BLOCKED SCHEDULE:\n- 09:00 - 10:30: Focus & Deep Work // Primary objective\n- 11:00 - 12:00: Team & Project Sync // Status review\n\n#### 2. EISENHOWER PRIORITY MATRIX:\n- Q2 (Important, Not Urgent): Focus & Deep Work\n- Q3 (Urgent, Not Important): Team & Project Sync`;
+    }
+
+    const scheduleLines = events.map(e => `- ${e.startTime} - ${e.endTime}: ${e.title}`).join('\n');
+    const matrixLines = events.map(e => `- ${e.priority} (${e.quadrant}): ${e.title}`).join('\n');
+
+    return `#### 1. TIME-BLOCKED SCHEDULE:\n${scheduleLines}\n\n#### 2. EISENHOWER PRIORITY MATRIX:\n${matrixLines}`;
   }
 
   async generateAISchedule() {
@@ -1780,15 +1872,17 @@ class AetheraCalendarApp {
     const hasValidKey = this.hasValidCloudKey();
     if (!hasValidKey) {
       setTimeout(() => {
-        const simulatedText = this.buildSimulatedScheduleText(promptText);
-        let parsed = [];
-        if (window.aetheraDB && typeof window.aetheraDB.parseAIScheduleText === 'function') {
-          parsed = window.aetheraDB.parseAIScheduleText(simulatedText, targetDate);
+        let parsed = this.parseUserPromptToScheduleEvents(promptText, targetDate);
+        if (!parsed || parsed.length === 0) {
+          const simulatedText = this.buildSimulatedScheduleText(promptText, targetDate);
+          if (window.aetheraDB && typeof window.aetheraDB.parseAIScheduleText === 'function') {
+            parsed = window.aetheraDB.parseAIScheduleText(simulatedText, targetDate);
+          }
         }
         this.displayParsedAIEvents(parsed, targetDate);
         this.isGeneratingAI = false;
         if (btnText) btnText.textContent = this.isId() ? 'Buat Jadwal' : 'Generate Schedule';
-      }, 400);
+      }, 350);
       return;
     }
 
@@ -1842,14 +1936,20 @@ class AetheraCalendarApp {
         parsed = window.aetheraDB.parseAIScheduleText(generatedText, targetDate);
       }
 
+      if (!parsed || parsed.length === 0) {
+        parsed = this.parseUserPromptToScheduleEvents(promptText, targetDate);
+      }
+
       this.displayParsedAIEvents(parsed, targetDate);
 
     } catch (err) {
-      console.warn('[CalendarApp] AI generation note, using structured simulation:', err.message);
-      const simulatedText = this.buildSimulatedScheduleText(promptText);
-      let fallbackParsed = [];
-      if (window.aetheraDB && typeof window.aetheraDB.parseAIScheduleText === 'function') {
-        fallbackParsed = window.aetheraDB.parseAIScheduleText(simulatedText, targetDate);
+      console.warn('[CalendarApp] AI generation note, using structured intelligent scheduler:', err.message);
+      let fallbackParsed = this.parseUserPromptToScheduleEvents(promptText, targetDate);
+      if (!fallbackParsed || fallbackParsed.length === 0) {
+        const simulatedText = this.buildSimulatedScheduleText(promptText, targetDate);
+        if (window.aetheraDB && typeof window.aetheraDB.parseAIScheduleText === 'function') {
+          fallbackParsed = window.aetheraDB.parseAIScheduleText(simulatedText, targetDate);
+        }
       }
       this.displayParsedAIEvents(fallbackParsed, targetDate);
     } finally {
@@ -1917,8 +2017,17 @@ class AetheraCalendarApp {
       await window.aetheraDB.saveCalendarEventsBatch(selectedEvents);
     }
 
+    // CRITICAL: Reload in-memory events so calendar re-renders immediately without full page refresh
+    await this.loadEvents();
     this.closeAIModal();
     this.render();
+    if (this.currentView === 'matrix') {
+      this.renderMatrixView();
+    } else if (this.currentView === 'agenda') {
+      this.renderAgendaView();
+    } else if (this.currentView === 'week') {
+      this.renderWeekView();
+    }
   }
 
   /* --------------------------------------------------------------------------
@@ -1951,6 +2060,359 @@ class AetheraCalendarApp {
       week.push(nextDay);
     }
     return week;
+  }
+
+  /* --------------------------------------------------------------------------
+     SLASH COMMAND PALETTE (/) CONTROLLER FOR CALENDAR
+     -------------------------------------------------------------------------- */
+  initSlashCommands() {
+    const modal = document.getElementById('cal-slash-palette-modal');
+    const input = document.getElementById('cal-slash-input');
+    const resultsContainer = document.getElementById('cal-slash-results');
+    const headerSlashBtn = document.getElementById('cal-header-slash-btn');
+
+    if (!modal || !input || !resultsContainer) return;
+
+    this.slashPaletteSelectedIndex = 0;
+    this.slashPaletteCommands = [
+      {
+        id: 'plan',
+        command: '/plan',
+        icon: '⚡',
+        title: this.isId() ? 'Asisten Jadwal AI' : 'AI Schedule Planner',
+        tag: '/plan [prompt]',
+        desc: this.isId() ? 'Susun blok waktu Eisenhower dari teks atau to-do' : 'Formulate Eisenhower time blocks from text or to-dos',
+        category: this.isId() ? 'Kecerdasan AI' : 'AI Intelligence',
+        action: (arg) => {
+          this.openAIModal();
+          if (arg) {
+            const promptInput = document.getElementById('ai-schedule-prompt');
+            if (promptInput) {
+              promptInput.value = arg;
+              promptInput.focus();
+            }
+          }
+        }
+      },
+      {
+        id: 'event',
+        command: '/event',
+        icon: '➕',
+        title: this.isId() ? 'Buat Acara Baru' : 'New Calendar Event',
+        tag: '/event [title]',
+        desc: this.isId() ? 'Tambahkan acara atau tugas dengan blok waktu' : 'Create a new calendar time-blocked event',
+        category: this.isId() ? 'Manajemen Acara' : 'Event Management',
+        action: (arg) => {
+          this.openEventModal(null, this.selectedDate);
+          if (arg) {
+            const titleInput = document.getElementById('event-form-title');
+            if (titleInput) {
+              titleInput.value = arg;
+              titleInput.focus();
+            }
+          }
+        }
+      },
+      {
+        id: 'today',
+        command: '/today',
+        icon: '📅',
+        title: this.isId() ? 'Lompat ke Hari Ini' : 'Jump to Today',
+        tag: '/today',
+        desc: this.isId() ? 'Kembali langsung ke tanggal dan tampilan hari ini' : 'Return immediately to today\'s date and current schedule',
+        category: this.isId() ? 'Navigasi' : 'Navigation',
+        action: () => this.jumpToToday()
+      },
+      {
+        id: 'q1',
+        command: '/q1',
+        icon: '🔴',
+        title: this.isId() ? 'Kuadran 1: Mendesak & Penting' : 'Quadrant 1: Urgent & Important',
+        tag: '/q1 [title]',
+        desc: this.isId() ? 'Tambah krisis, tenggat waktu, atau tugas kritis' : 'Add crisis, deadline, or immediate critical task to Q1',
+        category: this.isId() ? 'Prioritas Eisenhower' : 'Eisenhower Priorities',
+        action: (arg) => {
+          this.openEventModal(null, this.selectedDate, 'Q1');
+          if (arg) {
+            const titleInput = document.getElementById('event-form-title');
+            if (titleInput) { titleInput.value = arg; titleInput.focus(); }
+          }
+        }
+      },
+      {
+        id: 'q2',
+        command: '/q2',
+        icon: '🔷',
+        title: this.isId() ? 'Kuadran 2: Deep Work & Fokus Strategis' : 'Quadrant 2: Deep Work & Strategic',
+        tag: '/q2 [title]',
+        desc: this.isId() ? 'Tambah blok fokus, pembelajaran, atau arsitektur sistem' : 'Add high-leverage focus block or study session to Q2',
+        category: this.isId() ? 'Prioritas Eisenhower' : 'Eisenhower Priorities',
+        action: (arg) => {
+          this.openEventModal(null, this.selectedDate, 'Q2');
+          if (arg) {
+            const titleInput = document.getElementById('event-form-title');
+            if (titleInput) { titleInput.value = arg; titleInput.focus(); }
+          }
+        }
+      },
+      {
+        id: 'q3',
+        command: '/q3',
+        icon: '🟡',
+        title: this.isId() ? 'Kuadran 3: Delegasi & Pertemuan' : 'Quadrant 3: Delegate & Meetings',
+        tag: '/q3 [title]',
+        desc: this.isId() ? 'Tambah rapat tim, panggilan sinkronisasi, atau koordinasi' : 'Add meeting, team sync, or quick chore to Q3',
+        category: this.isId() ? 'Prioritas Eisenhower' : 'Eisenhower Priorities',
+        action: (arg) => {
+          this.openEventModal(null, this.selectedDate, 'Q3');
+          if (arg) {
+            const titleInput = document.getElementById('event-form-title');
+            if (titleInput) { titleInput.value = arg; titleInput.focus(); }
+          }
+        }
+      },
+      {
+        id: 'q4',
+        command: '/q4',
+        icon: '🟢',
+        title: this.isId() ? 'Kuadran 4: Kebugaran & Istirahat' : 'Quadrant 4: Wellness & Recovery',
+        tag: '/q4 [title]',
+        desc: this.isId() ? 'Tambah olahraga, istirahat, gym, atau waktu pribadi' : 'Add wellness, workout, gym, or recovery block to Q4',
+        category: this.isId() ? 'Prioritas Eisenhower' : 'Eisenhower Priorities',
+        action: (arg) => {
+          this.openEventModal(null, this.selectedDate, 'Q4');
+          if (arg) {
+            const titleInput = document.getElementById('event-form-title');
+            if (titleInput) { titleInput.value = arg; titleInput.focus(); }
+          }
+        }
+      },
+      {
+        id: 'month',
+        command: '/month',
+        icon: '📆',
+        title: this.isId() ? 'Tampilan Bulan (Month Grid)' : 'Month Grid View',
+        tag: '/month',
+        desc: this.isId() ? 'Beralih ke kisi kalender bulanan' : 'Switch to standard monthly calendar view',
+        category: this.isId() ? 'Tampilan Kalender' : 'Calendar Views',
+        action: () => this.switchView('month')
+      },
+      {
+        id: 'week',
+        command: '/week',
+        icon: '📊',
+        title: this.isId() ? 'Tampilan Minggu (Time Blocking)' : 'Week Time-Blocking View',
+        tag: '/week',
+        desc: this.isId() ? 'Beralih ke jadwal 7 hari per jam' : 'Switch to 7-day hourly schedule view',
+        category: this.isId() ? 'Tampilan Kalender' : 'Calendar Views',
+        action: () => this.switchView('week')
+      },
+      {
+        id: 'matrix',
+        command: '/matrix',
+        icon: '🔲',
+        title: this.isId() ? 'Tampilan Matriks Eisenhower' : 'Eisenhower Matrix View',
+        tag: '/matrix',
+        desc: this.isId() ? 'Beralih ke matriks prioritas 4 kuadran' : 'Switch to 4-quadrant priority matrix view',
+        category: this.isId() ? 'Tampilan Kalender' : 'Calendar Views',
+        action: () => this.switchView('matrix')
+      },
+      {
+        id: 'agenda',
+        command: '/agenda',
+        icon: '📑',
+        title: this.isId() ? 'Tampilan Agenda' : 'Chronological Agenda View',
+        tag: '/agenda',
+        desc: this.isId() ? 'Beralih ke daftar agenda kronologis' : 'Switch to chronological agenda stream',
+        category: this.isId() ? 'Tampilan Kalender' : 'Calendar Views',
+        action: () => this.switchView('agenda')
+      },
+      {
+        id: 'sync',
+        command: '/sync',
+        icon: '🔄',
+        title: this.isId() ? 'Sinkronkan ke Cloud' : 'Force Cloud Sync',
+        tag: '/sync',
+        desc: this.isId() ? 'Paksa sinkronisasi real-time multi-perangkat' : 'Trigger real-time multi-device cloud database sync',
+        category: this.isId() ? 'Sistem' : 'System',
+        action: async () => {
+          if (window.aetheraDB && typeof window.aetheraDB.syncWithCloud === 'function') {
+            await window.aetheraDB.syncWithCloud();
+          }
+          await this.loadEvents();
+          this.render();
+        }
+      },
+      {
+        id: 'notes',
+        command: '/notes',
+        icon: '📝',
+        title: this.isId() ? 'Buka Ruang Kerja Catatan' : 'Open Notes Workspace',
+        tag: '/notes',
+        desc: this.isId() ? 'Pindah ke ruang catatan bergaya Notion' : 'Open connected Notion-style workspace',
+        category: this.isId() ? 'Aplikasi Terhubung' : 'Connected Apps',
+        action: () => { window.location.href = 'notes.html'; }
+      },
+      {
+        id: 'ai-studio',
+        command: '/ai-studio',
+        icon: '🚀',
+        title: this.isId() ? 'Buka AI Studio' : 'Open AI Studio',
+        tag: '/ai-studio',
+        desc: this.isId() ? 'Akses Aethera Cortex AI Studio lengkap' : 'Launch full Aethera Cortex AI Studio',
+        category: this.isId() ? 'Aplikasi Terhubung' : 'Connected Apps',
+        action: () => { window.location.href = 'ai.html'; }
+      }
+    ];
+
+    const openPalette = () => {
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      input.value = '';
+      this.renderSlashPaletteResults('');
+      setTimeout(() => input.focus(), 50);
+    };
+
+    const closePalette = () => {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    };
+
+    headerSlashBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPalette();
+    });
+
+    // Global keyboard listener for '/' or 'Ctrl+K'
+    window.addEventListener('keydown', (e) => {
+      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      const isEditable = document.activeElement && (document.activeElement.isContentEditable || activeTag === 'input' || activeTag === 'textarea');
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openPalette();
+        return;
+      }
+
+      if (e.key === '/' && !isEditable && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        openPalette();
+        return;
+      }
+
+      if (modal.classList.contains('is-open')) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          closePalette();
+        }
+      }
+    });
+
+    // Close on clicking backdrop
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closePalette();
+    });
+
+    // Search input typing and navigation
+    input.addEventListener('input', () => {
+      this.renderSlashPaletteResults(input.value.trim());
+    });
+
+    input.addEventListener('keydown', (e) => {
+      const items = resultsContainer.querySelectorAll('.cal-slash-cmd-item');
+      if (items.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.slashPaletteSelectedIndex = (this.slashPaletteSelectedIndex + 1) % items.length;
+        this.highlightSlashPaletteItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.slashPaletteSelectedIndex = (this.slashPaletteSelectedIndex - 1 + items.length) % items.length;
+        this.highlightSlashPaletteItem(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const selectedEl = items[this.slashPaletteSelectedIndex];
+        if (selectedEl) {
+          const cmdId = selectedEl.dataset.cmdId;
+          const query = input.value.trim();
+          this.executeSlashPaletteCommand(cmdId, query);
+          closePalette();
+        }
+      }
+    });
+  }
+
+  renderSlashPaletteResults(rawQuery) {
+    const container = document.getElementById('cal-slash-results');
+    if (!container) return;
+
+    let cleanQuery = rawQuery.replace(/^\//, '').toLowerCase().trim();
+    const parts = cleanQuery.split(/\s+/);
+    const mainKey = parts[0] || '';
+
+    const filtered = this.slashPaletteCommands.filter(c => {
+      if (!cleanQuery) return true;
+      const cmdKey = c.command.replace(/^\//, '').toLowerCase();
+      if (cmdKey.startsWith(mainKey) || cmdKey.includes(cleanQuery)) return true;
+      if (c.title.toLowerCase().includes(cleanQuery)) return true;
+      if (c.desc.toLowerCase().includes(cleanQuery)) return true;
+      return false;
+    });
+
+    container.innerHTML = '';
+    this.slashPaletteSelectedIndex = 0;
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">${this.isId() ? 'Tidak ada perintah yang cocok' : 'No matching commands found'}</div>`;
+      return;
+    }
+
+    filtered.forEach((cmd, idx) => {
+      const item = document.createElement('div');
+      item.className = 'cal-slash-cmd-item' + (idx === 0 ? ' is-selected' : '');
+      item.dataset.cmdId = cmd.id;
+      item.innerHTML = `
+        <div class="cal-slash-cmd-icon">${cmd.icon}</div>
+        <div class="cal-slash-cmd-meta">
+          <div class="cal-slash-cmd-name">
+            <span>${cmd.title}</span>
+            <span class="cal-slash-cmd-tag">${cmd.tag}</span>
+          </div>
+          <div class="cal-slash-cmd-desc">${cmd.desc}</div>
+        </div>
+      `;
+      item.addEventListener('click', () => {
+        this.executeSlashPaletteCommand(cmd.id, rawQuery);
+        document.getElementById('cal-slash-palette-modal')?.classList.remove('is-open');
+      });
+      container.appendChild(item);
+    });
+  }
+
+  highlightSlashPaletteItem(items) {
+    items.forEach((item, i) => {
+      item.classList.toggle('is-selected', i === this.slashPaletteSelectedIndex);
+      if (i === this.slashPaletteSelectedIndex) {
+        item.scrollIntoView({ block: 'nearest' });
+      }
+    });
+  }
+
+  executeSlashPaletteCommand(cmdId, rawQuery = '') {
+    const cmd = this.slashPaletteCommands.find(c => c.id === cmdId);
+    if (!cmd) return;
+
+    let arg = '';
+    if (rawQuery) {
+      const trimmed = rawQuery.trim();
+      const firstSpace = trimmed.indexOf(' ');
+      if (firstSpace !== -1) {
+        arg = trimmed.substring(firstSpace + 1).trim();
+      }
+    }
+
+    cmd.action(arg);
   }
 
   escapeHtml(str) {

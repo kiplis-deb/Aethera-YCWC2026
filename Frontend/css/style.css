@@ -65,7 +65,7 @@
   --radius-lg: 24px;
   --radius-pill: 10px;
 
-  --font-display: 'Speed Rusher', 'SpeedRusher', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
@@ -558,7 +558,7 @@ select optgroup {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  font-family: 'Speed Rusher', 'SpeedRusher', var(--font-display);
+  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -940,7 +940,7 @@ select optgroup {
 
 .font-speed-rusher,
 .hero-title .font-speed-rusher {
-  font-family: 'Speed Rusher', 'SpeedRusher', var(--font-display), sans-serif;
+  font-family: 'Speed Rusher', 'SpeedRusher', sans-serif;
   font-weight: normal;
   letter-spacing: 0.02em;
   display: inline-block;

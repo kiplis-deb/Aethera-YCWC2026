@@ -203,7 +203,12 @@
         </svg>
       </button>
 
-      <!-- Action Button -->
+      <!-- Action Buttons -->
+      <button id="cal-header-slash-btn" class="cal-btn-slash-cmd" title="Open Slash Command Palette (or press /)" type="button">
+        <span class="cal-slash-badge">/</span>
+        <span data-i18n="cal.slash_cmd">Commands</span>
+      </button>
+
       <button id="cal-header-add-event-btn" class="cal-btn-add-event" title="Add New Calendar Event or Task">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -801,6 +806,27 @@
         <div style="display: flex; align-items: center; gap: 0.6rem;">
           <button type="button" id="day-detail-close-btn" class="btn btn-secondary" style="padding: 0.45rem 1rem;" data-i18n="cal.modal_cancel">Close</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       SLASH COMMAND PALETTE (/) MODAL FOR CALENDAR
+       ========================================================================== -->
+  <div id="cal-slash-palette-modal" class="cal-slash-modal-overlay" aria-hidden="true">
+    <div class="cal-slash-palette-card" role="dialog" aria-modal="true" aria-label="Calendar Command Palette">
+      <div class="cal-slash-input-wrap">
+        <span class="cal-slash-prefix">/</span>
+        <input type="text" id="cal-slash-input" class="cal-slash-input" placeholder="Type a command or filter (e.g. /plan, /event, /q1, /today, /week)..." autocomplete="off" spellcheck="false" />
+        <span class="cal-slash-hint">ESC</span>
+      </div>
+      <div id="cal-slash-results" class="cal-slash-results">
+        <!-- Dynamically rendered by calendar.js -->
+      </div>
+      <div class="cal-slash-footer">
+        <div><kbd>↑</kbd><kbd>↓</kbd> Navigate</div>
+        <div><kbd>Enter</kbd> Select</div>
+        <div><kbd>Esc</kbd> Close</div>
       </div>
     </div>
   </div>
