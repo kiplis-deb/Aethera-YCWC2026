@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aethera — Free AI for Daily Work, Students & Programmers</title>
+  <meta name="description"
+    content="100% Free decentralized cognitive AI suite for daily life, workplace productivity, calculus & academic research, and software development.">
+  <!-- Instant Theme Hydration: Prevents FOUT / theme flash -->
+  <script>
+    (function () {
+      try {
+        var preferred = localStorage.getItem('aethera-theme') || localStorage.getItem('aethera_theme');
+        if (preferred === 'light' || preferred === 'dark' || preferred === 'cyber') {
+          document.documentElement.setAttribute('data-theme', preferred);
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <!-- Resource Hints & Google Fonts -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="fonts/SpeedRusher.otf" as="font" type="font/otf" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="css/style.css?v=4.1.0">
+  <link rel="stylesheet" href="css/components.css?v=4.0.5">
+  <link rel="stylesheet" href="css/chatbot.css?v=4.0.6">
+  <link rel="stylesheet" href="css/quick-access.css?v=4.0.5">
+  <link rel="stylesheet" href="css/i18n.css?v=4.0.5">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FFFFFF'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <!-- KaTeX Math Rendering Engine -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+</head>
+
+<body>
+
+  <!-- ==========================================================================
+       SCROLL & CLICK-DRIVEN 3D QUANTUM UNIVERSE BACKGROUND
+       ========================================================================== -->
+  <div id="bg-universe" aria-hidden="true">
+    <canvas id="bg-canvas"></canvas>
+    <div class="bg-overlay-gradient"></div>
+  </div>
+
+  <!-- ==========================================================================
+       FLOATING NAVIGATION BAR
+       ========================================================================== -->
+  <header class="header-nav">
+    <nav class="nav-container">
+      <a href="index.html" class="nav-brand">
+        <div class="brand-symbol">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 2"
+              opacity="0.4" />
+            <polygon points="16,6 26,22 6,22" stroke="currentColor" stroke-width="2" fill="none" />
+            <circle cx="16" cy="16" r="3" fill="currentColor" />
+          </svg>
+        </div>
+        <span>Aethera</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="ai.html" class="nav-link" data-i18n="nav.ai_tools">AI Tools</a></li>
+        <li><a href="calendar.html" class="nav-link" data-i18n="nav.calendar">Calendar</a></li>
+        <li><a href="notes.html" class="nav-link" data-i18n="nav.notes">Notes</a></li>
+        <li><a href="news.html" class="nav-link" data-i18n="nav.news">Tech News</a></li>
+        <li class="nav-item-tertiary"><a href="#tools" class="nav-link" data-i18n="nav.tool_suite">Tool Suite</a></li>
+        <li class="nav-item-tertiary"><a href="ai.html?tool=vuln-scanner" class="nav-link" data-i18n="nav.secops">Cyber SecOps</a></li>
+        <li class="nav-item-secondary"><a href="#benchmarks" class="nav-link" data-i18n="nav.benchmarks">Benchmarks</a></li>
+        <li class="nav-item-secondary"><a href="#faq" class="nav-link" data-i18n="nav.faq">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <div id="navbar-auth-slot">
+          <a href="login.html?redirect=index.html" class="btn btn-secondary nav-auth-btn" id="nav-signin-btn"
+            title="Sign In" data-i18n-title="nav.sign_in"
+            style="padding: 0.35rem 0.75rem; font-size: 0.8rem; height: 32px; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; flex-shrink: 0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            <span data-i18n="nav.sign_in">Sign In</span>
+          </a>
+        </div>
+        <div class="navbar-lang-slot" id="navbar-lang-slot"></div>
+        <!-- Dark / Light Mode Toggle Button -->
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Dark and Light Theme"
+          title="Toggle Theme">
+          <svg class="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg class="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+
+        <a href="ai.html" class="btn btn-primary nav-desktop-cta">
+          <span data-i18n="nav.launch_studio">Launch AI Studio</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
+
+        <!-- Mobile Menu Hamburger Button -->
+        <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle Navigation Menu" aria-expanded="false"
+          aria-controls="mobile-nav-drawer">
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile Navigation Drawer Overlay -->
+    <div id="mobile-nav-drawer" class="mobile-nav-drawer" aria-hidden="true">
+      <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+      <div class="mobile-nav-panel">
+        <div class="mobile-nav-top">
+          <span class="mobile-nav-title" data-i18n="nav.mobile_nav_title">Navigation</span>
+          <button id="mobile-nav-close" class="mobile-nav-close" aria-label="Close menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <ul class="mobile-nav-menu">
+          <li><a href="ai.html" class="mobile-nav-item highlight" data-i18n="nav.mobile_ai">⚡ AI Tools Suite</a></li>
+          <li><a href="calendar.html" class="mobile-nav-item" data-i18n="nav.mobile_calendar">📅 Interactive
+              Calendar</a></li>
+          <li><a href="notes.html" class="mobile-nav-item" data-i18n="nav.mobile_notes">📝 Smart Notes</a></li>
+          <li><a href="news.html" class="mobile-nav-item" data-i18n="nav.mobile_news">📰 Tech &amp; Business News</a>
+          </li>
+          <li><a href="#tools" class="mobile-nav-item" data-i18n="nav.mobile_tools">🛠️ Tool Suite Catalog</a></li>
+          <li><a href="ai.html?tool=vuln-scanner" class="mobile-nav-item" data-i18n="nav.mobile_secops">🛡️ Cyber SecOps
+              Suite</a></li>
+          <li><a href="#benchmarks" class="mobile-nav-item" data-i18n="nav.mobile_benchmarks">📊 AI Benchmarks</a></li>
+          <li><a href="#faq" class="mobile-nav-item" data-i18n="nav.mobile_faq">❓ FAQ &amp; Guides</a></li>
+        </ul>
+        <div class="mobile-nav-actions" style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <div id="auth-status-slot" class="mobile-auth-status-slot" style="margin-bottom: 0.25rem;">
+            <a href="login.html?redirect=index.html" class="btn btn-secondary" title="Sign In"
+              data-i18n-title="nav.sign_in"
+              style="width: 100%; justify-content: center; padding: 0.75rem 1rem; font-size: 0.88rem; display: flex; align-items: center; gap: 0.45rem;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              <span data-i18n="nav.sign_in">Sign In</span>
+            </a>
+          </div>
+          <a href="ai.html" class="btn btn-primary"
+            style="width: 100%; justify-content: center; padding: 0.85rem 1.25rem;">
+            <span data-i18n="nav.launch_studio">Launch AI Studio</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==========================================================================
+         HERO SECTION (HIGH-OCTANE INTERACTIVE PLAYGROUND)
+         ========================================================================== -->
+    <section class="section hero-section" id="hero">
+      <div class="container">
+        <div class="hero-grid">
+
+          <!-- Hero Left Column: Narrative & Instant Prompt Launcher -->
+          <div class="hero-content">
+            <h1 class="heading-display hero-title">
+              <span class="font-speed-rusher" data-i18n="hero.title_prefix">Cognitive AI,</span> <br>
+              <span class="text-gradient">
+                <span id="hero-rotator" class="typewriter-text">For Daily Productivity.</span><span
+                  class="typewriter-cursor">|</span>
+              </span>
+            </h1>
+
+            <p class="hero-subtitle" data-i18n="hero.subtitle">
+              20+ helpful AI tools designed for students, creators, professionals, and everyday problem-solving. Draft
+              polite emails, solve math step-by-step, review code safely, plan your day, and learn with ease.
+            </p>
+
+            <div class="hero-actions" style="margin-top: 0.5rem;">
+              <a href="ai.html" class="btn btn-primary" data-i18n="hero.cta_start">Open All 20+ Free Tools &#8594;</a>
+              <a href="#tools" class="btn btn-secondary" data-i18n="hero.cta_explore">Explore Catalog</a>
+            </div>
+          </div>
+
+          <!-- Massive macOS AI Studio Live Showcase Glass Window (Interactive Feature Preview) -->
+          <div class="mac-ai-test-window mac-window-showcase" id="hero-ai-showcase"
+            aria-label="Interactive AI Feature Demo">
+            <!-- macOS Top Titlebar -->
+            <div class="mac-test-titlebar">
+              <div class="macos-traffic-lights">
+                <span class="traffic-light close"></span>
+                <span class="traffic-light minimize"></span>
+                <span class="traffic-light zoom"></span>
+              </div>
+            </div>
+
+            <!-- macOS Window Body -->
+            <div class="mac-test-body">
+              <!-- Left Sidebar: AI Tools Suite Menu -->
+              <div class="mac-test-sidebar">
+                <div class="mac-test-nav-title" data-i18n="mac.nav_title">POPULAR AI SUITE</div>
+                <button class="mac-test-nav-item active" data-showcase-tab="chatbot" type="button">
+                  <span class="status-icon">●</span>
+                  <span data-i18n="mac.tab_chat">AI Chatbot</span>
+                </button>
+                <button class="mac-test-nav-item" data-showcase-tab="email" type="button">
+                  <span class="status-icon">●</span>
+                  <span data-i18n="mac.tab_email">Email Drafter</span>
+                </button>
+                <button class="mac-test-nav-item" data-showcase-tab="code" type="button">
+                  <span class="status-icon">●</span>
+                  <span data-i18n="mac.tab_code">Smart Bug Hunter</span>
+                </button>
+                <button class="mac-test-nav-item" data-showcase-tab="math" type="button">
+                  <span class="status-icon">●</span>
+                  <span data-i18n="mac.tab_math">Math &amp; LaTeX</span>
+                </button>
+                <button class="mac-test-nav-item" data-showcase-tab="cve" type="button">
+                  <span class="status-icon">●</span>
+                  <span data-i18n="mac.nav_cve">CVE &amp; SecOps</span>
+                </button>
+                <button class="mac-test-nav-item" data-showcase-tab="resume" type="button">
+                  <span class="status-icon">●</span>
+                  <span data-i18n="mac.nav_resume">Resume Builder</span>
+                </button>
+
+                <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                  <a href="ai.html" class="mac-launch-studio-btn">
+                    <span data-i18n="mac.launch_studio">Open AI Studio &#8599;</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Main Simulated AI Studio Session -->
+              <div class="mac-showcase-workspace">
+                <div class="mac-showcase-stream" id="showcase-stream">
+                  <!-- User Message Bubble -->
+                  <div class="showcase-bubble user-bubble">
+                    <div class="bubble-header-mini">
+                      <span class="bubble-role" data-i18n="mac.bubble_you">You</span>
+                      <span class="bubble-timestamp" data-i18n="mac.bubble_time">Just now</span>
+                    </div>
+                    <div class="bubble-text-mini" id="showcase-user-prompt">
+                      Hey! How can I make my weekends feel more relaxing and less stressful?
+                    </div>
+                  </div>
+
+                  <!-- AI Message Bubble -->
+                  <div class="showcase-bubble ai-bubble">
+                    <div class="bubble-header-mini">
+                      <div class="ai-avatar-mini">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                          stroke-width="2.2">
+                          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                          <polyline points="2 17 12 22 22 17" />
+                          <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                      </div>
+                      <span class="bubble-role-ai" data-i18n="mac.bubble_friend">Aethera Friend</span>
+                      <span class="bubble-model-pill">Gemini 3.5 Flash</span>
+                      <span class="bubble-latency-metric">12.4ms • 142 T/s</span>
+                    </div>
+                    <div class="bubble-text-mini" id="showcase-ai-response">
+                      <p>Hey there! Honestly, the secret to a genuinely relaxing weekend is protecting your peace of
+                        mind before Saturday even hits. Here's what works wonders:</p>
+
+                      <div class="showcase-code-snippet">
+                        <div class="snippet-header">
+                          <span>weekend_unwind_guide.md</span>
+                          <span class="snippet-tag">Zero Stress Plan</span>
+                        </div>
+                        <pre><code>✨ 1. Friday Brain Dump: Write down pending tasks so they stop looping in your head.
+☕ 2. Slow Morning: No social media or email for the first hour after waking up.
+🌿 3. Unstructured Hours: Keep at least one afternoon free with zero planned obligations.</code></pre>
+                      </div>
+
+                      <div class="showcase-followups">
+                        <span class="followup-chip">Quick digital detox tips</span>
+                        <span class="followup-chip">Fun low-energy hobbies</span>
+                        <span class="followup-chip">Sunday evening reset</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Simulated Bottom Input Console (Clicking opens AI Studio) -->
+                <a href="ai.html" class="mac-showcase-input-bar"
+                  title="Click to launch interactive session in AI Studio">
+                  <div class="showcase-input-field">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <span id="showcase-input-placeholder" data-i18n="mac.input_placeholder">Chat freely about anything,
+                      brainstorm, or chat like a friend...</span>
+                  </div>
+                  <div class="showcase-input-actions">
+                    <span class="showcase-action-tag">VISION AI</span>
+                    <span class="showcase-action-tag">100% FREE</span>
+                    <span class="showcase-send-btn">
+                      <span>Launch AI</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    </span>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         COMMUNITY MARQUEE (CONTINUOUS SEAMLESS MOTION)
+         ========================================================================== -->
+    <div class="cyber-marquee" id="cyber-marquee" aria-hidden="true">
+      <div class="marquee-track" id="marquee-track">
+        <div class="marquee-group">
+          <div class="marquee-item"><span data-i18n="marquee.free">100% FREE FOR EVERYONE</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.gemini">POWERED BY GOOGLE GEMINI</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.tools">20+ HELPFUL DAILY TOOLS</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.math">STEP-BY-STEP MATH TUTOR</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.email">CLEAR &amp; POLITE EMAIL HELPER</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.fast">LIGHTNING-FAST RESPONSES</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.secure">PRIVATE &amp; SECURE BY DEFAULT</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.doc">EASY DOCUMENT SUMMARIES</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.routine">DAILY ROUTINE &amp; FOCUS PLANNER</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.code">FRIENDLY CODING &amp; BUG HELPER</span><span
+              class="marquee-divider"></span></div>
+        </div>
+        <div class="marquee-group" aria-hidden="true">
+          <div class="marquee-item"><span data-i18n="marquee.free">100% FREE FOR EVERYONE</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.gemini">POWERED BY GOOGLE GEMINI</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.tools">20+ HELPFUL DAILY TOOLS</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.math">STEP-BY-STEP MATH TUTOR</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.email">CLEAR &amp; POLITE EMAIL HELPER</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.fast">LIGHTNING-FAST RESPONSES</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.secure">PRIVATE &amp; SECURE BY DEFAULT</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.doc">EASY DOCUMENT SUMMARIES</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.routine">DAILY ROUTINE &amp; FOCUS PLANNER</span><span
+              class="marquee-divider"></span></div>
+          <div class="marquee-item"><span data-i18n="marquee.code">FRIENDLY CODING &amp; BUG HELPER</span><span
+              class="marquee-divider"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         CHAOS TO CLARITY: INTERACTIVE TRANSFORMATION SHOWCASE
+         ========================================================================== -->
+    <section class="section transformation-section" id="showcase">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="showcase.title">Raw Chaos ➔ Structured Intelligence</h2>
+          <p class="section-desc" data-i18n="showcase.subtitle">Experience how Aethera transforms messy inputs into
+            crisp, formatted, publication-ready outputs in milliseconds.</p>
+        </div>
+
+        <!-- Interactive Scenario Selector -->
+        <div class="scenario-tabs">
+          <button class="scenario-tab-btn active" data-scenario="notes" data-i18n="showcase.tab_notes">1. Quick Notes ➔
+            Clear Team Summary</button>
+          <button class="scenario-tab-btn" data-scenario="math" data-i18n="showcase.tab_math">2. Calculus Question ➔
+            Step-by-Step Solution</button>
+          <button class="scenario-tab-btn" data-scenario="code" data-i18n="showcase.tab_code">3. Buggy Code ➔ Clean
+            &amp; Modern Fix</button>
+          <button class="scenario-tab-btn" data-scenario="cyber"
+            style="border-color: rgba(0, 255, 204, 0.3); color: #00FFCC;" data-i18n="showcase.tab_cyber">4. Login
+            Security ➔ Safe &amp; Simple Fix</button>
+        </div>
+
+        <!-- Split Comparison Card -->
+        <div class="comparison-split-card">
+          <!-- Left Column: Raw Input -->
+          <div class="comparison-column">
+            <div class="comparison-header">
+              <span style="font-family: var(--font-display); font-weight: 700; font-size: 0.95rem;"
+                data-i18n="showcase.raw_label">RAW USER INPUT</span>
+              <span class="comparison-tag" data-i18n="showcase.unstructured">UNSTRUCTURED</span>
+            </div>
+            <div id="scenario-before-content" class="comparison-body">
+              met with dev team. talked about q3 goals. mark said database is slow we need caching redis maybe. sarah
+              wants deadline pushed 2 weeks for frontend auth. budget approved for 3 new engineers next month.
+            </div>
+          </div>
+
+          <!-- Right Column: Aethera AI Output -->
+          <div class="comparison-column">
+            <div class="comparison-header">
+              <span style="font-family: var(--font-display); font-weight: 700; font-size: 0.95rem;"
+                data-i18n="showcase.ai_label">AETHERA STRUCTURED COGNITION</span>
+              <span class="comparison-tag aethera-tag" data-i18n="showcase.ready">PUBLICATION READY</span>
+            </div>
+            <div id="scenario-after-content" class="comparison-body highlight-box">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+          <a id="scenario-launch-btn" href="ai.html" class="btn btn-primary" style="padding: 0.75rem 2rem;">
+            <span data-i18n="showcase.btn_try">Try This Live in AI Studio</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         20+ COMPREHENSIVE DAILY TOOLS SUITE (DAILY LIFE, STUDENTS, DEVS & CYBER)
+         ========================================================================== -->
+    <section class="section" id="tools">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="tools.title">Helpful Tools for Work, Study &amp; Daily Life</h2>
+          <p class="section-desc" data-i18n="tools.subtitle">Designed to make writing, studying, organizing your
+            schedule, and coding feel simple, friendly, and stress-free.</p>
+        </div>
+
+        <div class="bento-grid">
+          <!-- Box 1: Tall Left Card (Rows 1 & 2) -->
+          <div class="bento-card bento-card-tall-left">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">01</span>
+                </div>
+                <span class="badge" data-i18n="tools.bento.c1_badge">WORK &amp; LIFE</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c1_title">Email &amp; Message Helper</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c1_desc">Turn rough bullet points into polite, friendly
+                emails, salary talks, client updates, and thoughtful follow-ups.</p>
+
+              <!-- Email Preview Mockup -->
+              <div class="bento-email-mockup">
+                <div class="email-mockup-header">
+                  <div class="email-mockup-field"><span data-i18n="tools.bento.c1_mock_to_lbl">To:</span>
+                    <strong>team@project.org</strong>
+                  </div>
+                  <div class="email-mockup-field"><span data-i18n="tools.bento.c1_mock_sub_lbl">Subject:</span> <strong
+                      data-i18n="tools.bento.c1_mock_sub_val">Quick project update &amp; next steps!</strong></div>
+                </div>
+                <div class="email-mockup-body" data-i18n="tools.bento.c1_mock_body">
+                  "Hi team! Here’s a quick recap of what we finished this week, along with our next steps so everyone
+                  stays aligned..."
+                </div>
+              </div>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c1_tag1">Friendly Tone</span>
+                <span class="bento-tag" data-i18n="tools.bento.c1_tag2">Polite Follow-ups</span>
+                <span class="bento-tag" data-i18n="tools.bento.c1_tag3">Clear Updates</span>
+                <span class="bento-tag" data-i18n="tools.bento.c1_tag4">Salary Chats</span>
+              </div>
+            </div>
+            <div class="bento-card-footer">
+              <a href="ai.html?tool=email-drafter" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c1_btn">Open Email Helper</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Box 2: Wide Top-Middle Card (Row 1, Cols 2-3) -->
+          <div class="bento-card bento-card-wide-top">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 19L9 4l4 16 7-14" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">02</span>
+                </div>
+                <span class="badge" data-i18n="tools.bento.c2_badge">ACADEMIC &amp; MATH</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c2_title">Step-by-Step Math Tutor</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c2_desc">Clear, patient explanations for calculus,
+                algebra, equations, and tricky homework problems formatted neatly so they make sense.</p>
+
+              <!-- Math Formula Preview Box -->
+              <div class="bento-math-formula-box">
+                <div class="math-formula-rendered">
+                  &int;<sub>0</sub><sup>&infin;</sup> e<sup>-x<sup>2</sup></sup> dx = &radic;&pi; / 2
+                </div>
+                <span class="math-formula-badge" data-i18n="tools.bento.c2_formula_badge">Gaussian Integral
+                  (Step-by-Step Proof)</span>
+              </div>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c2_tag1">Algebra &amp; Calculus</span>
+                <span class="bento-tag" data-i18n="tools.bento.c2_tag2">Step-by-Step Proofs</span>
+                <span class="bento-tag" data-i18n="tools.bento.c2_tag3">Homework Help</span>
+                <span class="bento-tag" data-i18n="tools.bento.c2_tag4">Formulas &amp; Graphs</span>
+              </div>
+            </div>
+            <div class="bento-card-footer">
+              <a href="ai.html?tool=math-solver" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c2_btn">Open Math Tutor</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Box 3: Mid-Left Card (Row 2, Col 2) -->
+          <div class="bento-card bento-card-mid-left">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">03</span>
+                </div>
+                <span class="badge" data-i18n="tools.bento.c3_badge">WORK &amp; STUDY</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c3_title">Quick Document Summarizer</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c3_desc">Turn long articles, meeting notes, PDFs, or
+                study lectures into friendly, bite-sized takeaways in seconds.</p>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c3_tag1">Key Takeaways</span>
+                <span class="bento-tag" data-i18n="tools.bento.c3_tag2">Quick Bullet Points</span>
+                <span class="bento-tag" data-i18n="tools.bento.c3_tag3">Meeting Notes</span>
+                <span class="bento-tag" data-i18n="tools.bento.c3_tag4">Study Guides</span>
+              </div>
+            </div>
+            <div class="bento-card-footer">
+              <a href="ai.html?tool=doc-summarizer" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c3_btn">Open Summarizer</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Box 4: Mid-Right Card (Row 2, Col 3) -->
+          <div class="bento-card bento-card-mid-right">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">04</span>
+                </div>
+                <span class="badge" data-i18n="tools.bento.c4_badge">PRODUCTIVITY</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c4_title">Day &amp; Routine Planner</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c4_desc">Organize your to-dos with calm focus, balanced
+                schedules, and realistic time blocks that keep your days stress-free.</p>
+
+              <!-- Mini Priority Matrix Indicator -->
+              <div class="bento-matrix-pills">
+                <div class="matrix-mini-pill urgent">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span data-i18n="tools.bento.c4_pill1">Top Priority Today</span>
+                </div>
+                <div class="matrix-mini-pill schedule">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span data-i18n="tools.bento.c4_pill2">Focused Work Time</span>
+                </div>
+              </div>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c4_tag1">Daily Priorities</span>
+                <span class="bento-tag" data-i18n="tools.bento.c4_tag2">Focus Timer</span>
+                <span class="bento-tag" data-i18n="tools.bento.c4_tag3">Time Blocking</span>
+                <span class="bento-tag"
+                  style="border-color: rgba(6, 182, 212, 0.4); color: var(--accent-cyan, #06B6D4);"
+                  data-i18n="tools.bento.c4_tag4">Synced Calendar</span>
+              </div>
+            </div>
+            <div class="bento-card-footer" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <a href="ai.html?tool=task-planner" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c4_btn1">Open Day Planner</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+              <a href="calendar.html" class="bento-action-btn"
+                style="background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35); color: var(--accent-cyan, #06B6D4);">
+                <span class="action-btn-text" data-i18n="tools.bento.c4_btn2">Open Calendar</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Box 5: Wide Bottom Card (Row 3, Spanning Cols 1-3) -->
+          <div class="bento-card bento-card-wide-bottom">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="16 18 22 12 16 6" />
+                      <polyline points="8 6 2 12 8 18" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">05</span>
+                </div>
+                <span class="badge" data-i18n="tools.bento.c5_badge">CODING &amp; APP DESIGN</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c5_title">Code Explainer &amp; App Blueprint</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c5_desc">Understand code in plain English, discover how
+                your programs run, and sketch out clean app architectures with simple visual diagrams.</p>
+
+              <!-- Code & Topology Box -->
+              <div class="bento-code-topology-box">
+                <div class="topology-flow">
+                  <span class="topology-node" data-i18n="tools.bento.c5_node1">User</span>
+                  <span class="topology-arrow">&rarr;</span>
+                  <span class="topology-node" data-i18n="tools.bento.c5_node2">Web App</span>
+                  <span class="topology-arrow">&rarr;</span>
+                  <span class="topology-node" data-i18n="tools.bento.c5_node3">Fast Cache</span>
+                  <span class="topology-arrow">&rarr;</span>
+                  <span class="topology-node" data-i18n="tools.bento.c5_node4">Database</span>
+                </div>
+                <span class="complexity-tag" data-i18n="tools.bento.c5_badge2">Fast &amp; Scalable &bull; Clean
+                  Code</span>
+              </div>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c5_tag1">Plain English Explanations</span>
+                <span class="bento-tag" data-i18n="tools.bento.c5_tag2">Bug Hunter</span>
+                <span class="bento-tag" data-i18n="tools.bento.c5_tag3">Visual Flowcharts</span>
+                <span class="bento-tag" data-i18n="tools.bento.c5_tag4">Performance Tips</span>
+                <span class="bento-tag" data-i18n="tools.bento.c5_tag5">App Blueprints</span>
+              </div>
+            </div>
+            <div class="bento-card-footer">
+              <a href="ai.html?tool=code-explainer" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c5_btn">Open Code &amp; Blueprint Tools</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Box 6: Top-Right Card (Rows 1 & 2, Col 4) -->
+          <div class="bento-card bento-card-cyber bento-card-top-right">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">06</span>
+                </div>
+                <span class="badge badge-cyber" data-i18n="tools.bento.c6_badge">SAFETY &amp; SECURITY</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c6_title">Online Safety &amp; Security Shield</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c6_desc">Friendly safety checkups, phishing alerts, and
+                simple privacy advice to keep your apps and data safe without confusing jargon.</p>
+
+              <!-- Cyber Key Stats 2-Column Grid -->
+              <div class="bento-cyber-stats">
+                <div class="cyber-stat-card">
+                  <span class="cyber-stat-num">240K+</span>
+                  <span class="cyber-stat-lbl" data-i18n="tools.bento.c6_stat1">Known Safety Checks</span>
+                </div>
+                <div class="cyber-stat-card">
+                  <span class="cyber-stat-num">0.04ms</span>
+                  <span class="cyber-stat-lbl" data-i18n="tools.bento.c6_stat2">Instant Check Speed</span>
+                </div>
+              </div>
+
+              <!-- Cyber Terminal Preview Window -->
+              <div class="bento-cyber-terminal">
+                <div class="cyber-terminal-bar">
+                  <div class="cyber-terminal-dots">
+                    <span class="cyber-terminal-dot red"></span>
+                    <span class="cyber-terminal-dot yellow"></span>
+                    <span class="cyber-terminal-dot green"></span>
+                  </div>
+                  <div class="cyber-terminal-status">
+                    <span class="cyber-pulse-dot"></span>
+                    <span class="cyber-terminal-title" data-i18n="tools.bento.c6_term_title">privacy.guard //
+                      ACTIVE</span>
+                  </div>
+                </div>
+                <div class="cyber-terminal-logs">
+                  <div class="terminal-log-line success">
+                    <span class="terminal-log-tag">[INIT]</span>
+                    <span data-i18n="tools.bento.c6_term_log1">Safety shield and privacy checkup active</span>
+                  </div>
+                  <div class="terminal-log-line warn">
+                    <span class="terminal-log-tag">[TIP]</span>
+                    <span data-i18n="tools.bento.c6_term_log2">1 quick update recommended for best privacy</span>
+                  </div>
+                  <div class="terminal-log-line success">
+                    <span class="terminal-log-tag">[FIX]</span>
+                    <span data-i18n="tools.bento.c6_term_log3">Safe, simple fix ready to apply</span>
+                  </div>
+                  <div class="terminal-log-line">
+                    <span class="terminal-log-tag">[STATUS]</span>
+                    <span data-i18n="tools.bento.c6_term_log4">Everything is secure and protected</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c6_tag1">Privacy Checkup</span>
+                <span class="bento-tag" data-i18n="tools.bento.c6_tag2">Scam &amp; Phishing Alerts</span>
+                <span class="bento-tag" data-i18n="tools.bento.c6_tag3">Easy Safety Tips</span>
+              </div>
+            </div>
+            <div class="bento-card-footer">
+              <a href="ai.html?tool=vuln-scanner" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c6_btn">Open Safety Checkup</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Box 7: Bottom-Right Card (Row 3, Col 4) -->
+          <div class="bento-card bento-card-bottom-right">
+            <div class="bento-card-body">
+              <div class="bento-card-header">
+                <div class="bento-header-meta">
+                  <div class="bento-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                  </div>
+                  <span class="bento-card-idx">07</span>
+                </div>
+                <span class="badge" data-i18n="tools.bento.c7_badge">CODE SAFETY</span>
+              </div>
+              <h3 class="bento-card-title" data-i18n="tools.bento.c7_title">Safe Code &amp; Logic Review</h3>
+              <p class="bento-card-desc" data-i18n="tools.bento.c7_desc">Review your code, login flows, and app logic
+                for common mistakes, helping you protect user data with confidence.</p>
+
+              <div class="bento-feature-tags">
+                <span class="bento-tag" data-i18n="tools.bento.c7_tag1">Safe Login Checks</span>
+                <span class="bento-tag" data-i18n="tools.bento.c7_tag2">Logic &amp; Bug Review</span>
+                <span class="bento-tag" data-i18n="tools.bento.c7_tag3">Data Protection</span>
+              </div>
+            </div>
+            <div class="bento-card-footer">
+              <a href="ai.html?tool=payload-generator" class="bento-action-btn">
+                <span class="action-btn-text" data-i18n="tools.bento.c7_btn">Check Code Safety</span>
+                <span class="action-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Catalog Explorer Strip -->
+        <div class="bento-catalog-strip">
+          <span class="catalog-strip-title" data-i18n="tools.bento.strip_title">EXPLORE MORE HELPERS:</span>
+          <div class="catalog-strip-pills">
+            <a href="ai.html?tool=resume-builder" class="catalog-pill" data-i18n="tools.bento.strip_pill1">Job &amp;
+              Resume Coach</a>
+            <a href="ai.html?tool=research-lab" class="catalog-pill" data-i18n="tools.bento.strip_pill2">Curious
+              Explorer</a>
+            <a href="ai.html?tool=payload-generator" class="catalog-pill" data-i18n="tools.bento.strip_pill3">Code
+              Safety Review</a>
+            <a href="ai.html?tool=system-architect" class="catalog-pill" data-i18n="tools.bento.strip_pill4">System
+              &amp; App Blueprint</a>
+            <a href="ai.html" class="catalog-pill highlight" data-i18n="tools.bento.strip_pill5">+14 More in Studio</a>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+          <a href="ai.html" class="btn btn-primary" style="padding: 0.9rem 2.5rem; font-size: 1.05rem;">
+            <span data-i18n="tools.bento.cta_all">Explore All 20+ Free AI Tools</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         MODEL BENCHMARK MATRIX
+         ========================================================================== -->
+    <section class="section" id="benchmarks">
+      <div class="container">
+        <div class="benchmark-container">
+          <div>
+            <h2 class="section-title" style="text-align: left; margin-bottom: 1.25rem;" data-i18n="benchmarks.title">
+              Accuracy You Can Trust for Study, Work &amp; Code</h2>
+            <p class="section-desc" style="text-align: left; margin-bottom: 2rem;" data-i18n="benchmarks.subtitle">
+              Powered by Google Gemini, Aethera delivers clear, reliable answers — whether you're solving tough math
+              equations, writing and debugging code, or researching a project.
+            </p>
+            <div style="display: flex; gap: 2.5rem; font-family: var(--font-mono); font-size: 0.82rem;">
+              <div>
+                <span
+                  style="color: var(--text-primary); font-size: 1.75rem; font-weight: 700; display: block; font-family: var(--font-display);">96.8%</span>
+                <span style="color: var(--text-muted);" data-i18n="benchmarks.stat_coding">Coding Accuracy</span>
+              </div>
+              <div>
+                <span
+                  style="color: var(--text-primary); font-size: 1.75rem; font-weight: 700; display: block; font-family: var(--font-display);">92.4%</span>
+                <span style="color: var(--text-muted);" data-i18n="benchmarks.stat_math">Math &amp; Science</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="benchmark-card">
+            <div id="benchmarks-wrapper">
+              <!-- Loaded dynamically from data.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         INTERACTIVE FAQ ACCORDION
+         ========================================================================== -->
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="faq.title">Everything You Need to Know</h2>
+          <p class="section-desc" data-i18n="faq.subtitle">Quick, simple answers to help you get the most out of Aethera
+            every day.</p>
+        </div>
+
+        <div class="faq-grid">
+          <div class="faq-item active">
+            <button class="faq-question">
+              <span data-i18n="faq.q1">Is Aethera really completely free to use?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a1">
+              Yes, absolutely! Every single tool, our smart notes workspace, live tech news, and our friendly AI
+              assistant are 100% free for everyone. Whether you're studying, working, or just exploring, there are zero
+              subscriptions, paywalls, or surprise fees.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span data-i18n="faq.q2">Can Aethera help me with math problems and homework?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a2">
+              Definitely! When you ask a question about algebra, calculus, or physics, Aethera breaks down the solution
+              step by step and displays formulas in neat, textbook-quality math that is super easy to read and
+              understand.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span data-i18n="faq.q3">Can I use Aethera for everyday work emails and writing?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a3">
+              You bet! Aethera is here to make your day easier. It can help you draft clear emails, summarize long
+              articles or class notes, organize your daily schedule, and even polish up your resume and cover letters in
+              seconds.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <span data-i18n="faq.q4">What makes Aethera so fast and helpful?</span>
+              <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer" data-i18n="faq.a4">
+              Aethera is powered by Google's latest Gemini models, giving you lightning-fast, thoughtful responses
+              whenever you need them — fully connected with your notes, calendar, and live news.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       FUTURISTIC TERMINAL FOOTER
+       ========================================================================== -->
+  <footer class="footer-terminal">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="nav-brand">
+            <div class="brand-symbol">
+              <svg viewBox="0 0 32 32" fill="none">
+                <polygon points="16,6 26,22 6,22" stroke="currentColor" stroke-width="2" fill="none" />
+                <circle cx="16" cy="16" r="3" fill="currentColor" />
+              </svg>
+            </div>
+            <span>Aethera</span>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 320px; line-height: 1.6;"
+            data-i18n="footer.desc">
+            100% Free decentralized cognitive intelligence and daily tools for students, workers, and programmers.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title" data-i18n="footer.col_daily">Daily Life &amp; Work</h4>
+          <ul class="footer-links">
+            <li><a href="ai.html?tool=email-drafter" class="footer-link" data-i18n="tools.bento.c1_title">Email &amp;
+                Message Helper</a></li>
+            <li><a href="calendar.html" class="footer-link" data-i18n="nav.calendar">Interactive Calendar &amp;
+                Matrix</a></li>
+            <li><a href="ai.html?tool=task-planner" class="footer-link" data-i18n="tools.bento.c4_title">Day &amp;
+                Routine Planner</a></li>
+            <li><a href="ai.html?tool=doc-summarizer" class="footer-link" data-i18n="tools.bento.c3_title">Quick
+                Document Summarizer</a></li>
+            <li><a href="ai.html?tool=resume-builder" class="footer-link" data-i18n="tools.bento.strip_pill1">Job &amp;
+                Resume Coach</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title" data-i18n="footer.col_study">Study &amp; Coding Tools</h4>
+          <ul class="footer-links">
+            <li><a href="ai.html?tool=math-solver" class="footer-link" data-i18n="tools.bento.c2_title">Step-by-Step
+                Math Tutor</a></li>
+            <li><a href="ai.html?tool=code-explainer" class="footer-link" data-i18n="tools.bento.c5_title">Code
+                Explainer</a></li>
+            <li><a href="ai.html?tool=bug-hunter" class="footer-link" data-i18n="tools.bento.c5_tag2">Bug Doctor &amp;
+                Fixer</a></li>
+            <li><a href="ai.html?tool=sql-architect" class="footer-link" data-i18n="qa.ai">Database &amp; SQL Helper</a>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title" data-i18n="footer.col_safety">Safety &amp; Security</h4>
+          <ul class="footer-links">
+            <li><a href="ai.html?tool=vuln-scanner" class="footer-link" data-i18n="tools.bento.c6_tag1">Security
+                Checkup</a></li>
+            <li><a href="ai.html?tool=threat-intel" class="footer-link" data-i18n="tools.bento.c6_title">Threat &amp;
+                Phishing Shield</a></li>
+            <li><a href="ai.html?tool=payload-generator" class="footer-link" data-i18n="tools.bento.c7_title">Code
+                Safety &amp; Contract Audit</a></li>
+            <li><a href="ai.html?tool=network-forensics" class="footer-link" data-i18n="tools.bento.c6_badge">Network
+                &amp; Traffic Guard</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title" data-i18n="footer.col_community">Community Status</h4>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="footer-status-pill">
+              <span data-i18n="footer.status">100% FREE ACCESS // LIVE</span>
+            </div>
+            <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);">
+              MODEL: GEMINI-3.5-FLASH
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span data-i18n="footer.copy">&copy; 2026 AETHERA OPEN LABS. FREE &amp; OPEN ACCESS.</span>
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+          <a href="ai.html" class="footer-link" data-i18n="nav.launch_studio">FREE AI STUDIO</a>
+          <a href="calendar.html" class="footer-link" data-i18n="nav.calendar">CALENDAR</a>
+          <a href="#" class="footer-link" data-i18n="footer.privacy">PRIVACY</a>
+          <a href="#" class="footer-link" data-i18n="footer.terms">TERMS</a>
+          <span style="color: var(--text-primary); font-weight: 600;">BUILD v3.9.0-LIVE</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/data.js?v=2.0.0"></script>
+  <script src="js/background-engine.js?v=4.1.4"></script>
+  <script src="js/user-db.js?v=4.0.7"></script>
+  <script src="js/i18n.js?v=1.0.2"></script>
+  <script src="js/app.js?v=4.3.3"></script>
+  <script src="js/chatbot.js?v=4.0.7"></script>
+  <script src="js/quick-access.js?v=4.0.5"></script>
+</body>
+
+</html>

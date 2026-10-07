@@ -1,0 +1,365 @@
+================================================================================
+                    DOKUMENTASI DAN PENJELASAN LENGKAP WEBSITE
+                                 AETHERA
+              (Next-Gen Cognitive Workspace & Personal AI Suite)
+================================================================================
+
+Dibuat: 2026
+Bahasa: Bahasa Indonesia
+Format: Dokumen Teks Resmi (.txt)
+
+--------------------------------------------------------------------------------
+DAFTAR ISI:
+--------------------------------------------------------------------------------
+1. PENDAHULUAN & GAMBARAN UMUM AETHERA
+2. ARSITEKTUR SISTEM & STRUKTUR DIREKTORI (FRONTEND & BACKEND)
+3. FITUR-FITUR UTAMA WEBSITE:
+   3.1. Halaman Utama / Landing Page (index.html)
+   3.2. AI Cortex Studio & 20+ Alat Spesifik (ai.html)
+   3.3. Quantum Matrix Calendar & Routine Planner (calendar.html)
+   3.4. Smart Workspace Catatan ala Notion (notes.html)
+   3.5. Radar Berita Teknologi & Bisnis (news.html)
+   3.6. Asisten Obrolan AI Mengambang (Floating Chatbot Assistant)
+   3.7. Bilah Akses Cepat Permanen (Quick Access Dock)
+4. FITUR TEMA GELAP & TERANG (DARK / LIGHT MODE)
+5. FITUR MULTI-BAHASA (INTERNATIONALIZATION / i18n ENGINE)
+6. ARSITEKTUR BASIS DATA & SINKRONISASI MULTI-PERANGKAT (DATABASE)
+7. KEAMANAN & PRIVASI SISTEM
+8. KESIMPULAN & RINGKASAN KEUNGGULAN
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. PENDAHULUAN & GAMBARAN UMUM AETHERA
+--------------------------------------------------------------------------------
+Aethera adalah platform ruang kerja cerdas (Cognitive Workspace) dan suite 
+produktivitas personal generasi baru yang dirancang untuk pelajar, mahasiswa, 
+pemrogram (developer), profesional, dan pengguna sehari-hari. 
+
+Aethera menggabungkan kekuatan kecerdasan buatan (AI) terdepan dari Google Gemini 
+dengan ekosistem produktivitas yang cair tanpa hambatan (frictionless). Melalui 
+Aethera, pengguna dapat:
+- Menulis dan merapikan email bisnis, pesan sopan, serta surat lamaran kerja.
+- Belajar matematika dan kalkulus langkah demi langkah secara mendalam.
+- Mengaudit, menjelaskan, dan memperbaiki bug kode pemrogram secara otomatis.
+- Mengelola jadwal dan rutinitas menggunakan Kalender Berbasis Matriks Eisenhower.
+- Menulis dan mengorganisir ide menggunakan Ruang Catatan Berbasis Blok ala Notion.
+- Memantau tren berita teknologi dunia secara real-time dengan ringkasan instan AI.
+- Berinteraksi dengan Asisten AI yang dapat langsung membuat catatan atau jadwal.
+
+Semua fasilitas ini tersedia 100% gratis, tanpa paywall tersembunyi, dan dengan 
+komitmen privasi data pengguna yang terlindungi.
+
+
+--------------------------------------------------------------------------------
+2. ARSITEKTUR SISTEM & STRUKTUR DIREKTORI (FRONTEND & BACKEND)
+--------------------------------------------------------------------------------
+Aethera dibangun dengan arsitektur modern yang bersih dan terpisah secara tegas 
+antara antarmuka pengguna (Frontend) dan server aplikasi/logika (Backend):
+
+aethera/
+├── Frontend/                    -> Seluruh antarmuka dan aset web
+│   ├── index.html               -> Halaman utama (Landing Page)
+│   ├── ai.html                  -> AI Cortex Studio (20+ Modul AI)
+│   ├── calendar.html            -> Kalender Interaktif & Matriks Rutinitas
+│   ├── notes.html               -> Ruang Catatan Pintar ala Notion
+│   ├── news.html                -> Radar Berita Teknologi & Bisnis
+│   ├── login.html               -> Halaman Masuk / Pendaftaran Akun
+│   ├── css/                     -> Seluruh stylesheet desain modular
+│   │   ├── style.css            -> Desain dasar & token variabel CSS
+│   │   ├── components.css       -> Komponen tombol, kartu, dan layout
+│   │   ├── ai-studio.css        -> Tampilan ruang kerja Studio AI
+│   │   ├── calendar.css         -> Tampilan kalender & kuadran prioritas
+│   │   ├── notes.css            -> Tampilan editor catatan blok
+│   │   ├── news.css             -> Tampilan agregator berita & modal AI
+│   │   ├── chatbot.css          -> Tampilan dialog asisten AI
+│   │   ├── quick-access.css     -> Tampilan bilah navigasi cepat kanan
+│   │   └── i18n.css             -> Desain tombol pemilihan bahasa
+│   ├── js/                      -> Logika aplikasi sisi klien
+│   │   ├── app.js               -> Skrip utama landing page & animasi
+│   │   ├── ai-studio.js         -> Logika inferensi 20+ alat AI
+│   │   ├── calendar.js          -> Logika kalender, drag & drop, time-block
+│   │   ├── notes.js             -> Logika editor blok, slash menu, search
+│   │   ├── news.js              -> Logika fetch RSS feed & AI briefing
+│   │   ├── chatbot.js           -> Logika obrolan AI & integrasi kalender
+│   │   ├── quick-access.js      -> Pengendali bilah pintasan cepat permanen
+│   │   ├── user-db.js           -> Klien sinkronisasi basis data & autentikasi
+│   │   ├── data.js              -> Data konfigurasi prompt dan preset
+│   │   └── i18n.js              -> Mesin terjemahan bilingual EN / ID
+│   └── fonts/                   -> Tipografi khusus (SpeedRusher, Inter)
+│
+├── Backend/                     -> Server dan basis data
+│   ├── server.js                -> Server Node.js mandiri & Proksi AI
+│   ├── db.json                  -> Basis data persisten lokal (JSON file)
+│   ├── .env                     -> Kunci rahasia API (GEMINI_API_KEY)
+│   └── package.json             -> Skrip eksekusi backend
+│
+├── .gitignore                   -> Pengaman file rahasia (.env & db.json)
+├── package.json                 -> Runner proyek utama
+└── start-server.bat             -> Skrip sekali-klik untuk menyalakan server
+
+
+--------------------------------------------------------------------------------
+3. FITUR-FITUR UTAMA WEBSITE
+--------------------------------------------------------------------------------
+
+3.1. HALAMAN UTAMA / LANDING PAGE (index.html)
+Halaman depan Aethera dirancang dengan estetika glassmorphism monokrom kosmik yang 
+sangat memukau, dilengkapi:
+- Hero Section: Tipografi modern dengan animasi kosmik interaktif orbit tata surya, 
+  menjelaskan proposisi nilai platform secara seketika.
+- Live AI Engine Preview (Sandbox): Pengunjung dapat mencoba kecerdasan buatan 
+  secara langsung di halaman utama untuk 4 fungsi instan (Penyusun Email, Penjelas 
+  Kode, Kartu Belajar, dan Ringkasan Rapat) tanpa harus berpindah halaman.
+- macOS Showcase Mockup: Jendela simulasi bergaya macOS yang menampilkan alur 
+  percakapan AI Studio secara elegan.
+- Raw Chaos to Structured Intelligence: Komponen komparasi interaktif yang 
+  memperlihatkan bagaimana masukan acak/berantakan dari pengguna diubah oleh AI 
+  menjadi dokumen berstruktur rapi dalam hitungan milidetik.
+- Bento Grid Showcase: Kartu-kartu visual berteknologi modern yang menyorot alat-alat 
+  unggulan seperti Email Helper, Math Tutor, Bug Hunter, dan Focus Planner.
+- Marquee Status Ticker: Ticker berjalan yang menginformasikan status mesin Gemini, 
+  keamanan lokal, dan kecepatan respon.
+- Performance Benchmarks: Grafik performa yang memaparkan akurasi koding, matematika, 
+  kecepatan first paint load, dan enkripsi privasi.
+- Tanya Jawab (FAQ): Komponen akordion informatif mengenai legalitas, biaya (100% 
+  gratis), dan keamanan data.
+
+3.2. AI CORTEX STUDIO & 20+ ALAT SPESIFIK (ai.html / js/ai-studio.js)
+Studio AI yang lengkap dan intuitif yang menyediakan lebih dari 20 alat pintar siap 
+pakai untuk kebutuhan belajar, bekerja, dan pemrograman:
+ 1. Email & Message Helper: Merangkai draf email sopan, negosiasi gaji, dan tindak 
+    lanjut profesional dari poin-poin kasar.
+ 2. Step-by-Step Math Tutor: Menyelesaikan dan membuktikan persamaan aljabar, 
+    kalkulus, dan fisika dengan notasi matematika bertahap yang mudah dipahami.
+ 3. Bug Hunter & Code Auditor: Mendeteksi celah keamanan, logika rusak, memory 
+    leak, serta memberikan perbaikan kode bersih.
+ 4. Code Explainer: Menerjemahkan alur kode pemrograman yang rumit ke dalam bahasa 
+    manusia sehari-hari.
+ 5. CVE & Cyber Security Auditor: Mengaudit keamanan form login, autentikasi, dan 
+    menganalisis celah keamanan sistem (CVE) disertai rekomendasi mitigasi.
+ 6. Resume & Cover Letter Builder: Menyusun CV yang lolos seleksi ATS serta surat 
+    lamaran yang persuasif.
+ 7. Meeting Minutes & Action Items: Mengonversi transkrip atau rekaman rapat yang 
+    acak menjadi daftar tugas dan keputusan yang jelas.
+ 8. Study Flashcards & Exam Prep: Menghasilkan kartu tanya-jawab untuk persiapan 
+    ujian sekolah maupun kuliah.
+ 9. Daily Routine & Habit Matrix: Menyusun jadwal harian seimbang berbasis energi 
+    dan kebiasaan positif.
+10. Podcast & Video Scriptwriter: Menulis naskah video YouTube, TikTok edukasi, 
+    atau naskah podcast berdurasi terstruktur.
+11. Prompt Synthesizer & Enhancer: Menyulap prompt sederhana menjadi prompt berstandar 
+    tinggi untuk hasil AI maksimal.
+12. Document & Long-Text Summarizer: Meringkas laporan PDF atau artikel panjang 
+    menjadi ringkasan eksekutif berpoin.
+13. Academic Essay & Thesis Outliner: Membantu perumusan kerangka tesis, skripsi, 
+    atau esai ilmiah lengkap dengan metodologi.
+14. Creative Writing & Storyteller: Membantu pembuatan alur novel, cerita pendek, 
+    dan deskripsi dunia fiksi.
+15. Language Translator & Cultural Localizer: Menerjemahkan bahasa dengan tetap 
+    mempertahankan nuansa budaya setempat.
+16. Regex & SQL Query Generator: Menghasilkan query SQL database kompleks dan pola 
+    regular expression secara otomatis.
+17. Business Proposal & Pitch Deck Drafter: Menyusun proposal pendanaan startup 
+    atau proposal kerja sama bisnis.
+18. Contract & Legal Term Simplifier: Menjelaskan pasal-pasal kontrak kerja atau 
+    perjanjian hukum agar mudah dimengerti orang awam.
+19. Data Analyst & Trend Interpreter: Menganalisis tabel data mentah dan menemukan 
+    pola korelasi bisnis tersembunyi.
+20. Mindfulness & De-Stress Journal: Memberikan panduan refleksi diri, journaling, 
+    dan latihan ketenangan pikiran saat stres.
+
+Fitur Kontrol Studio:
+- Pemilihan model Gemini (Gemini 2.5 Flash, Gemini 1.5 Pro, Gemma).
+- Pengaturan Temperature (kreativitas vs ketepatan presisi).
+- Tombol aksi: Salin Hasil (Copy), Unduh Berkas (Download), dan Bersihkan (Clear).
+
+3.3. QUANTUM MATRIX CALENDAR & ROUTINE PLANNER (calendar.html / js/calendar.js)
+Kalender interaktif modern yang menggabungkan manajemen waktu dengan Matriks 
+Eisenhower:
+- Time-Blocking Grid: Pengaturan jadwal berdasarkan blok waktu harian, mingguan, 
+  dan bulanan.
+- Matriks Eisenhower (4 Kuadran Prioritas):
+  * Kuadran 1 (Q1 - Merah): Mendesak & Penting (Kerjakan Sekarang / Do First).
+  * Kuadran 2 (Q2 - Biru): Penting & Tidak Mendesak (Jadwalkan / Deep Work).
+  * Kuadran 3 (Q3 - Kuning): Mendesak & Tidak Penting (Delegasikan / Delegate).
+  * Kuadran 4 (Q4 - Abu): Tidak Penting & Tidak Mendesak (Eliminasi / Don't Do).
+- Drag & Drop: Pengguna dapat menyeret acara antar kuadran atau mengubah jam.
+- Kategori Acara: Deep Work, Rapat (Meeting), Belajar (Study), Pribadi (Personal), 
+  dan Istirahat (Break).
+- AI Daily Scheduler: Tombol pintar yang secara otomatis mengoptimalkan alur kerja 
+  harian Anda berdasarkan prioritas tugas.
+- Sinkronisasi Cloud: Acara kalender tersimpan rapi dan dapat diakses dari halaman 
+  Catatan (Notes) serta dibaca oleh Asisten Chatbot.
+
+3.4. SMART WORKSPACE CATATAN ALA NOTION (notes.html / js/notes.js)
+Ruang kerja catatan produktivitas dengan arsitektur blok modular:
+- Block-Based Rich Editor: Setiap baris adalah blok fleksibel (Paragraf, Heading 1, 
+  Heading 2, Heading 3, To-do Checklist, Bullet List, Numbered List, Callout Box 
+  dengan ikon emoji, serta Code Block).
+- Slash Command Menu (/): Mengetik simbol '/' di editor langsung membuka menu 
+  perintah cepat untuk menambahkan elemen baru tanpa menyentuh mouse.
+- Kotak Acara Kalender Terintegrasi: Sidebar catatan otomatis memuat agenda kalender 
+  hari ini, memudahkan pengguna membuat catatan rapat (meeting notes) dalam 1 klik.
+- Fitur Pencarian Pintar (Ctrl + K): Menemukan catatan apa pun dalam milidetik.
+- Organisasi Lengkap: Dukungan folder pribadi, penandaan tag, pin catatan di atas, 
+  dan penandaan favorit.
+- Penyimpanan Otomatis: Setiap karakter yang diketik langsung tersimpan secara aman 
+  ke basis data lokal dan cloud.
+
+3.5. RADAR BERITA TEKNOLOGI & BISNIS (news.html / js/news.js)
+Portal intelijen teknologi yang mengumpulkan berita dunia secara langsung:
+- Multi-Source RSS Aggregator: Mengambil kabar terbaru dari sumber kredibel 
+  (TechCrunch, Ars Technica, The Verge, Wired, VentureBeat, Hacker News).
+- Filter Kategori Dinamis: Deep Tech & AI, Venture Capital & Startup, Keamanan 
+  Siber (Cybersecurity), Enterprise & Cloud, serta Hardware & Gadget.
+- AI Briefing Modal: Setiap kartu berita dilengkapi tombol "AI Briefing". Ketika 
+  diklik, asisten AI Aethera langsung menganalisis artikel dan menyajikan ringkasan 
+  eksekutif 3 poin penting dalam Bahasa Indonesia.
+- Breaking News Live Ticker: Pita berita berjalan di bagian atas halaman.
+
+3.6. ASISTEN OBROLAN AI MENGAMBANG (FLOATING CHATBOT ASSISTANT)
+Dialog obrolan AI yang selalu siap membantu di setiap halaman website:
+- Multi-Turn Conversation: Mampu mengingat konteks percakapan sebelumnya.
+- Integrasi Penuh dengan Kalender & Catatan: Pengguna dapat meminta AI untuk:
+  "Jadwalkan rapat besok jam 2 siang" -> AI akan langsung membuat acara di Kalender!
+  "Buatkan catatan rencana belanja" -> AI akan langsung membuat berkas di Catatan!
+- Tombol Saran (Suggestion Chips): Menampilkan ide pertanyaan populer.
+- Respons Cepat & Ramah: Memberikan jawaban solutif, santun, dan terstruktur.
+
+3.7. BILAH AKSES CEPAT PERMANEN (QUICK ACCESS DOCK)
+Bilah navigasi vertikal di tepi kanan layar yang selalu tampil permanen (always-on):
+- 5 Tombol Pintasan Cepat:
+  1. Halaman Alat AI (ai.html)
+  2. Kalender Interaktif (calendar.html)
+  3. Catatan Pintar (notes.html)
+  4. Berita Teknologi (news.html)
+  5. Tombol Pembuka Obrolan Asisten Aethera
+- Tooltip Mengambang: Menampilkan keterangan tujuan tombol saat diarahkan kursor.
+- Selalu Terlihat: Tidak memerlukan gerakan kursor mendekat, siap diakses kapan pun.
+
+
+--------------------------------------------------------------------------------
+4. FITUR TEMA GELAP & TERANG (DARK / LIGHT MODE)
+--------------------------------------------------------------------------------
+Aethera dirancang dengan sistem tema ganda (dual theme engine) yang komprehensif:
+- Sakelar Sekali-Klik: Tombol ikon Bulan / Matahari di navigasi atas setiap halaman.
+- Variabel Desain CSS (Design Tokens): Menggunakan arsitektur CSS modern dengan 
+  variabel warna yang terstandarisasi:
+  * Dark Mode: Latar belakang hitam obsidian dan slate kosmik (#090a0f, #0f172a), 
+    aksen kaca transparan dengan blur 24px, teks putih jernih (#ffffff), dan border 
+    halus yang nyaman untuk bekerja di malam hari tanpa membuat mata lelah.
+  * Light Mode: Latar belakang putih bersih dan abu-abu modern (#ffffff, #f8fafc), 
+    teks gelap kontras tinggi (#0f172a), border tegas bernuansa minimalis, dan bayangan 
+    lembut yang nyaman untuk siang hari.
+- Anti-FOUT (Zero Flash of Unstyled Theme): Dilengkapi skrip inline di bagian <head> 
+  setiap dokumen HTML yang memeriksa 'aethera-theme' di localStorage sebelum halaman 
+  selesai dimuat. Hasilnya: tidak ada kedipan warna layar saat pengguna berpindah 
+  halaman atau melakukan refresh.
+- Sinkronisasi Seluruh Komponen: Mengubah tema di satu halaman secara instan 
+  memperbarui tampilan seluruh modal, kartu, dan menu samping.
+
+
+--------------------------------------------------------------------------------
+5. FITUR MULTI-BAHASA (INTERNATIONALIZATION / i18n ENGINE)
+--------------------------------------------------------------------------------
+Aethera dilengkapi dengan mesin penerjemah bilingual lokal (i18n engine) berkinerja 
+tinggi tanpa ketergantungan pustaka luar (zero-dependency):
+- Pilihan Bahasa: Bahasa Indonesia (ID) dan Bahasa Inggris (EN).
+- Sakelar Bahasa [EN | ID]: Terletak rapi di baris navigasi (navbar) setiap halaman.
+- Reaktif Seketika (Zero Reload): Mengubah bahasa tidak membutuhkan muat ulang halaman. 
+  Sistem memicu CustomEvent 'aethera:language-change' yang secara otomatis menerjemahkan 
+  seluruh teks, tombol, placeholder kolom input, judul tooltip, dan status auth.
+- Kamus Terpusat (Frontend/js/i18n.js): Memuat ratusan kunci terjemahan yang presisi 
+  dan alami untuk kedua bahasa.
+- Perlindungan Integritas Konten Pengguna: 
+  Sistem secara ketat HANYA menerjemahkan antarmuka (UI) website. Catatan pribadi yang 
+  dibuat pengguna di modul Notes serta judul acara kalender yang dibuat pengguna di 
+  modul Calendar TIDAK AKAN PERNAH diubah atau diterjemahkan secara paksa. Hal ini 
+  menjaga orisinalitas data pengguna 100%.
+
+
+--------------------------------------------------------------------------------
+6. ARSITEKTUR BASIS DATA & SINKRONISASI MULTI-PERANGKAT (DATABASE)
+--------------------------------------------------------------------------------
+Aethera menggunakan arsitektur basis data lokal persisten yang cerdas dan efisien:
+
+6.1. PENYIMPANAN SERVER (Backend/db.json)
+- Format JSON Terstruktur: Seluruh data pengguna disimpan di file 'Backend/db.json'.
+- Partisi Pengguna Terisolasi: Setiap akun pengguna memiliki ruang data tersendiri:
+  * users[username].id: ID unik pengguna.
+  * users[username].username: Nama pengguna akun.
+  * users[username].displayName: Nama tampilan yang ramah.
+  * users[username].salt & hash: Kriptografi keamanan kata sandi.
+  * users[username].data.calendar: Koleksi seluruh acara kalender pengguna.
+  * users[username].data.notes: Koleksi seluruh catatan berbasis blok pengguna.
+  * users[username].data.chats: Riwayat interaksi dengan asisten AI.
+
+6.2. SISTEM AUTENTIKASI AMAN (LOGIN & REGISTER)
+- Registrasi Akun: Pengguna baru dapat mendaftarkan akun di halaman login.html.
+- Kriptografi Keamanan: Password pengguna dienkripsi di sisi server menggunakan 
+  algoritma kriptografi bawaan Node.js (crypto) dengan teknik Salt acak dan Hashing 
+  SHA-512. Password dalam bentuk teks polos (plaintext) tidak pernah disimpan di disk.
+- Session Token: Setelah login berhasil, server menerbitkan token sesi yang valid 
+  dan aman untuk mengotorisasi sinkronisasi data.
+
+6.3. SINKRONISASI DUA ARAH (TWO-WAY SYNC)
+- Mode Tamu (Guest Mode): Jika pengguna belum login, data tetap tersimpan secara 
+  lokal di browser melalui localStorage (aethera_calendar_guest, aethera_notes_guest).
+- Sinkronisasi Saat Masuk (Login Sync): Saat pengguna masuk ke akun mereka, data 
+  terbaru di server langsung ditarik (pull) dan disinkronkan ke antarmuka klien.
+- Push Otomatis Real-Time: Setiap kali pengguna menambah catatan, mengubah isi blok, 
+  mencentang to-do, atau memindahkan acara kalender, sistem klien (Frontend/js/user-db.js) 
+  langsung mengirimkan pembaruan data secara otomatis ke server melalui endpoint 
+  API '/api/user/sync'.
+
+6.4. KEMAMPUAN MULTI-PERANGKAT (MULTI-DEVICE READY)
+- Server Backend Aethera secara otomatis mendeteksi alamat IPv4 jaringan LAN lokal 
+  melalui fungsi 'getLocalNetworkIp()'.
+- Anda dapat menyalakan server di laptop atau komputer Anda, lalu membuka Aethera 
+  dari ponsel pintar (smartphone) atau tablet yang terhubung ke jaringan Wi-Fi yang sama.
+- Catatan dan jadwal yang Anda buat di laptop akan langsung muncul di smartphone Anda 
+  begitu Anda login ke akun yang sama!
+
+
+--------------------------------------------------------------------------------
+7. KEAMANAN & PRIVASI SISTEM
+--------------------------------------------------------------------------------
+Keamanan dan privasi adalah pilar utama perancangan Aethera:
+- Kunci API Tersembunyi (Server-Side AI Proxy): Kunci Google Gemini API (GEMINI_API_KEY) 
+  disimpan secara eksklusif di dalam file 'Backend/.env' di server. Klien di browser 
+  TIDAK PERNAH memiliki akses langsung ke kunci API ini. Semua permintaan inferensi 
+  AI dikirim ke endpoint internal '/api/ai/chat' di mana server yang memvalidasi dan 
+  meneruskannya ke Google.
+- Proteksi File Internal (403 Forbidden): Server Node.js Aethera secara tegas 
+  memblokir permintaan web yang mencoba mengakses berkas rahasia seperti:
+  * Backend/db.json
+  * Backend/.env
+  * .git / .gitignore
+  * Seluruh file konfigurasi backend.
+  Upaya akses dari browser ke file-file tersebut akan langsung dibalas dengan kode 
+  status keamanan '403 Forbidden'.
+- Isolasi Data Antar Pengguna: Pengguna yang login dengan akun A tidak akan pernah 
+  bisa melihat atau mengubah kalender dan catatan milik akun B.
+
+
+--------------------------------------------------------------------------------
+8. KESIMPULAN & RINGKASAN KEUNGGULAN
+--------------------------------------------------------------------------------
+Aethera bukan sekadar antarmuka AI biasa, melainkan sebuah ekosistem produktivitas 
+pribadi yang utuh, tangguh, dan sangat memanjakan penggunanya:
+1. All-in-One: Menggabungkan AI Generator, Kalender Eisenhower, Catatan Blok Notion, 
+   Berita Teknologi RSS, dan Asisten Chatbot dalam 1 aplikasi.
+2. Desain Premium: Tampilan Glassmorphism monokrom kosmik dengan dukungan penuh 
+   Dark Mode dan Light Mode yang nyaman dipandang.
+3. Multibahasa Sempurna: Dukungan Bahasa Indonesia dan Bahasa Inggris secara penuh 
+   dengan pergantian reaktif tanpa muat ulang halaman.
+4. Sinkronisasi Nyata: Basis data lokal mandiri yang mendukung login akun dan dapat 
+   diakses bersamaan dari beberapa perangkat di jaringan yang sama.
+5. Ringan & Cepat: Dibangun dengan standar web murni (Vanilla HTML, CSS, JavaScript, 
+   dan Node.js bawaan) tanpa ketergantungan framework berat yang membebani memori.
+
+================================================================================
+                    AKHIR DARI DOKUMEN PENJELASAN WEBSITE
+                             AETHERA © 2026
+================================================================================

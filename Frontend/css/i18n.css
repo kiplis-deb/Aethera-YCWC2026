@@ -1,0 +1,126 @@
+/* ==========================================================================
+   AETHERA - LANGUAGE SELECTOR & I18N STYLES
+   Monochrome Glassmorphic Segmented Toggle (EN | ID)
+   Seamless integration across all navigation headers
+   ========================================================================== */
+
+.aethera-lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  border-radius: 10px;
+  padding: 2px;
+  box-sizing: border-box;
+  height: 32px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  user-select: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.aethera-lang-toggle:hover {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.aethera-lang-globe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px 0 6px;
+  color: var(--text-muted, #94a3b8);
+  pointer-events: none;
+}
+
+.aethera-lang-globe svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+}
+
+.aethera-lang-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 2px 7px;
+  height: 26px;
+  border-radius: 7px;
+  font-family: var(--font-display, 'Inter', sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.aethera-lang-btn:hover {
+  color: var(--text-primary, #ffffff);
+}
+
+.aethera-lang-btn.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text-primary, #ffffff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+}
+
+/* Light Theme Support */
+[data-theme="light"] .aethera-lang-toggle {
+  background: rgba(0, 0, 0, 0.04);
+  border: none;
+}
+
+[data-theme="light"] .aethera-lang-toggle:hover {
+  border-color: transparent;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .aethera-lang-globe {
+  color: #64748b;
+}
+
+[data-theme="light"] .aethera-lang-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .aethera-lang-btn:hover {
+  color: #0f172a;
+}
+
+[data-theme="light"] .aethera-lang-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar / Compact Variants (e.g. inside Notes sidebar footer) */
+.aethera-lang-toggle.compact {
+  height: 28px;
+  border-radius: 8px;
+}
+
+.aethera-lang-toggle.compact .aethera-lang-btn {
+  height: 22px;
+  font-size: 0.68rem;
+  padding: 1px 5px;
+}
+
+.aethera-lang-toggle.compact .aethera-lang-globe svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Smooth fade transition when language changes */
+.i18n-transitioning {
+  transition: opacity 0.12s ease-in-out;
+  opacity: 0.85;
+}
