@@ -1177,7 +1177,7 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
           ${this.escapeHtml(descText)}
         </p>
         <div class="auth-error-input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.65rem;">
-          <input type="password" class="auth-key-quick-input" placeholder="Paste your Google AI Studio API key (AIzaSy...)" value="" style="flex: 1; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.55rem 0.85rem; color: #fff; font-family: var(--font-mono); font-size: 16px;">
+          <input type="password" class="auth-key-quick-input" placeholder="Paste your Google AI Studio API key (AIzaSy... or AQ.Ab8...)" value="" style="flex: 1; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.55rem 0.85rem; color: #fff; font-family: var(--font-mono); font-size: 16px;">
           <button type="button" class="btn btn-primary auth-save-key-btn" style="padding: 0.55rem 1.15rem; font-size: 0.82rem; font-weight: 700; white-space: nowrap;">Connect Key &amp; Run</button>
         </div>
         <div class="auth-error-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
@@ -1198,7 +1198,7 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
         const raw = input.value;
         const key = this.cleanApiKey(raw);
         if (!key || key.length < 15) {
-          alert('Please paste a valid Google Gemini API key (starts with AIzaSy...).');
+          alert('Please paste a valid Google Gemini API key (AIzaSy... or AQ.Ab8...).');
           return;
         }
         this.setApiKey(key);

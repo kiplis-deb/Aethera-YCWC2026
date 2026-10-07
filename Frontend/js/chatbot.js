@@ -1253,7 +1253,7 @@ class AetheraChatbot {
             ${isAuth ? 'Google AI Studio rejected the request with invalid credentials.' : safeError}
           </p>
           <div class="chatbot-auth-input-row">
-            <input type="password" class="chatbot-auth-input" placeholder="Paste your AIzaSy... key" autocomplete="off">
+            <input type="password" class="chatbot-auth-input" placeholder="Paste your Gemini key (AIzaSy... or AQ.Ab8...)" autocomplete="off">
             <button class="chatbot-auth-save-btn">Save</button>
           </div>
           <div style="display: flex; gap: 0.35rem; align-items: center; justify-content: space-between; margin-top: 0.25rem;">
