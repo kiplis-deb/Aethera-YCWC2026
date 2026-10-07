@@ -55,6 +55,14 @@
   <!-- Top Glassmorphism Navigation Bar -->
   <header class="cal-header">
     <div class="cal-header-left">
+      <!-- Mobile Sidebar / Filter Drawer Trigger -->
+      <button id="cal-mobile-menu-btn" class="cal-mobile-menu-btn" aria-label="Toggle Navigation & Filters" title="Menu & Filters" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
       <a href="index.html" class="cal-nav-link" title="Return to Overview">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -204,6 +212,13 @@
       </button>
 
       <!-- Action Buttons -->
+      <button id="cal-header-ai-plan-btn" class="cal-btn-ai-header" title="Auto-Plan Day with AI (or press / and type plan)" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+        <span class="cal-header-ai-text" data-i18n="cal.auto_plan">AI Plan</span>
+      </button>
+
       <button id="cal-header-slash-btn" class="cal-btn-slash-cmd" title="Open Slash Command Palette (or press /)" type="button">
         <span class="cal-slash-badge">/</span>
         <span data-i18n="cal.slash_cmd">Commands</span>
@@ -224,6 +239,35 @@
 
     <!-- Left Sidebar: AI Schedule Assistant, Mini Calendar & Filters -->
     <aside class="cal-sidebar-left">
+
+      <!-- Mobile Drawer Header -->
+      <div class="cal-sidebar-mobile-header">
+        <div class="cal-sidebar-mobile-title">
+          <span class="cal-ai-badge">⚡ AETHERA</span>
+          <span>Calendar &amp; Filters</span>
+        </div>
+        <button id="cal-sidebar-close-btn" class="cal-sidebar-close-btn" aria-label="Close menu" type="button">&times;</button>
+      </div>
+
+      <!-- Mobile App Links inside Drawer -->
+      <div class="cal-sidebar-app-links">
+        <a href="index.html" class="cal-drawer-app-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span data-i18n="cal.overview">Overview</span>
+        </a>
+        <a href="ai.html" class="cal-drawer-app-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          <span data-i18n="cal.ai_studio">AI Studio</span>
+        </a>
+        <a href="notes.html" class="cal-drawer-app-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span data-i18n="nav.notes">Notes</span>
+        </a>
+        <a href="news.html" class="cal-drawer-app-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+          <span data-i18n="nav.news">Tech News</span>
+        </a>
+      </div>
 
       <!-- AI Schedule & Task Planner Launcher Card -->
       <div class="cal-ai-widget">
@@ -355,6 +399,9 @@
       </div>
 
     </aside>
+
+    <!-- Mobile Drawer Backdrop Overlay -->
+    <div id="cal-drawer-backdrop" class="cal-drawer-backdrop" aria-hidden="true"></div>
 
     <!-- Center Main Calendar Canvas -->
     <main class="cal-main-content">
@@ -830,6 +877,36 @@
       </div>
     </div>
   </div>
+
+  <!-- ==========================================================================
+       MOBILE BOTTOM DOCK (PHONES & SMALL TABLETS)
+       ========================================================================== -->
+  <nav id="cal-mobile-bottom-dock" class="cal-mobile-bottom-dock" role="navigation" aria-label="Mobile Calendar Views">
+    <button class="cal-dock-btn active" data-view="month" title="Month Grid View" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span data-i18n="cal.month">Month</span>
+    </button>
+    <button class="cal-dock-btn" data-view="week" title="Week Time-Blocking" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+      <span data-i18n="cal.week">Week</span>
+    </button>
+    <button class="cal-dock-btn" data-view="matrix" title="Eisenhower Matrix" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span data-i18n="cal.matrix">Matrix</span>
+    </button>
+    <button class="cal-dock-btn" data-view="agenda" title="Chronological Agenda" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span data-i18n="cal.agenda">Agenda</span>
+    </button>
+    <button class="cal-dock-btn cal-dock-ai-btn" data-action="ai-plan" title="Auto-Plan Day with AI" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span data-i18n="cal.auto_plan">AI Plan</span>
+    </button>
+    <button class="cal-dock-btn cal-dock-add-btn" data-action="new-event" title="New Calendar Event" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span data-i18n="cal.new_event">Event</span>
+    </button>
+  </nav>
 
   <!-- Scripts -->
   <script src="js/data.js?v=2.0.0"></script>

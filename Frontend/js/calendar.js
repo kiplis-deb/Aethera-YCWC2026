@@ -97,6 +97,7 @@ class AetheraCalendarApp {
     this.initTheme();
     this.initURLParams();
     this.bindDOMEvents();
+    this.initMobileSupport();
     this.initDayDetailModalEvents();
     this.initSlashCommands();
 
@@ -355,6 +356,76 @@ class AetheraCalendarApp {
   }
 
   /* --------------------------------------------------------------------------
+     MOBILE & TABLET RESPONSIVE INTERACTION CONTROLLER
+     -------------------------------------------------------------------------- */
+  initMobileSupport() {
+    const sidebar = document.querySelector('.cal-sidebar-left');
+    const backdrop = document.getElementById('cal-drawer-backdrop');
+    const menuBtn = document.getElementById('cal-mobile-menu-btn');
+    const closeBtn = document.getElementById('cal-sidebar-close-btn');
+    const headerAiPlanBtn = document.getElementById('cal-header-ai-plan-btn');
+
+    const openDrawer = () => {
+      if (sidebar) sidebar.classList.add('mobile-drawer-open');
+      if (backdrop) backdrop.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeDrawer = () => {
+      if (sidebar) sidebar.classList.remove('mobile-drawer-open');
+      if (backdrop) backdrop.classList.remove('is-open');
+      document.body.style.overflow = '';
+    };
+
+    menuBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDrawer();
+    });
+
+    closeBtn?.addEventListener('click', () => closeDrawer());
+    backdrop?.addEventListener('click', () => closeDrawer());
+
+    // Auto-close drawer on Esc key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sidebar?.classList.contains('mobile-drawer-open')) {
+        closeDrawer();
+      }
+    });
+
+    // Close drawer when any category filter or link is clicked
+    sidebar?.querySelectorAll('.cal-filter-item, .cal-drawer-app-link, #cal-quick-ai-btn')?.forEach(el => {
+      el.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          closeDrawer();
+        }
+      });
+    });
+
+    // Header AI Plan button
+    headerAiPlanBtn?.addEventListener('click', () => {
+      this.openAIModal();
+    });
+
+    // Mobile Bottom Navigation Dock
+    const dock = document.getElementById('cal-mobile-bottom-dock');
+    if (dock) {
+      dock.querySelectorAll('.cal-dock-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const view = btn.dataset.view;
+          const action = btn.dataset.action;
+          if (view) {
+            this.switchView(view);
+          } else if (action === 'ai-plan') {
+            this.openAIModal();
+          } else if (action === 'new-event') {
+            this.openEventModal();
+          }
+        });
+      });
+    }
+  }
+
+  /* --------------------------------------------------------------------------
      NAVIGATION & VIEW CONTROLLERS
      -------------------------------------------------------------------------- */
   navigatePrev() {
@@ -391,6 +462,11 @@ class AetheraCalendarApp {
       const active = btn.dataset.view === viewName;
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    document.querySelectorAll('.cal-dock-btn[data-view]').forEach(btn => {
+      const active = btn.dataset.view === viewName;
+      btn.classList.toggle('active', active);
     });
 
     // Update visibility of view containers

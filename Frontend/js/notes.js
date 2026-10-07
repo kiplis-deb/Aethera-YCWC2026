@@ -405,10 +405,12 @@
         this.db.saveNote(note);
       }
 
-      // Auto-collapse sidebar on mobile upon opening a note
+      // Auto-collapse sidebar on mobile/tablet upon opening a note
       const sidebar = document.getElementById('notes-sidebar');
-      if (window.innerWidth <= 768 && sidebar && !sidebar.classList.contains('collapsed')) {
+      const backdrop = document.getElementById('notes-sidebar-backdrop');
+      if (window.innerWidth <= 1024 && sidebar && !sidebar.classList.contains('collapsed')) {
         sidebar.classList.add('collapsed');
+        if (backdrop) backdrop.classList.remove('is-open');
       }
 
       // Update Topbar
@@ -869,6 +871,47 @@
       this.triggerAutoSave();
     }
 
+    insertBlockFromMobile(type) {
+      const container = document.getElementById('notes-blocks-canvas');
+      if (!container) return;
+
+      let targetEl = this.activeBlockEl;
+      if (!targetEl || !document.contains(targetEl)) {
+        const blocks = container.querySelectorAll('.note-block');
+        targetEl = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+      }
+
+      if (targetEl) {
+        const content = targetEl.querySelector('.block-content');
+        const isEmpty = !content || content.innerText.trim() === '';
+        if (isEmpty) {
+          this.convertBlockType(targetEl, type === 'new-block' ? 'p' : type);
+          return;
+        }
+      }
+
+      const newBlock = {
+        id: 'b_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+        type: type === 'new-block' ? 'p' : type,
+        text: '',
+        checked: false
+      };
+      const newBlockEl = this.createBlockElement(newBlock);
+      if (targetEl) {
+        targetEl.after(newBlockEl);
+      } else {
+        container.appendChild(newBlockEl);
+      }
+
+      const nextContent = newBlockEl.querySelector('.block-content');
+      if (nextContent) {
+        this.focusContentEditable(nextContent);
+      }
+
+      this.evaluateEmptyStarterChips();
+      this.triggerAutoSave();
+    }
+
     /* ==========================================================================
        SLASH COMMAND MENU (/)
        ========================================================================== */
@@ -876,20 +919,32 @@
       const menu = document.getElementById('notion-slash-menu');
       if (!menu) return;
 
-      const rect = anchorEl.getBoundingClientRect();
-      menu.style.position = 'fixed';
-      const menuWidth = 280;
-      const menuHeight = 320;
-      let top = rect.bottom + 6;
-      let left = rect.left;
-      if (top + menuHeight > window.innerHeight) {
-        top = Math.max(10, rect.top - menuHeight - 6);
+      if (window.innerWidth <= 768) {
+        menu.style.position = 'fixed';
+        menu.style.left = '50%';
+        menu.style.transform = 'translateX(-50%)';
+        menu.style.top = 'max(60px, 14vh)';
+        menu.style.width = 'min(320px, 94vw)';
+      } else {
+        const rect = (anchorEl && typeof anchorEl.getBoundingClientRect === 'function')
+          ? anchorEl.getBoundingClientRect()
+          : { bottom: 100, left: 240, top: 100 };
+        menu.style.transform = '';
+        menu.style.position = 'fixed';
+        const menuWidth = 280;
+        const menuHeight = 320;
+        let top = rect.bottom + 6;
+        let left = rect.left;
+        if (top + menuHeight > window.innerHeight) {
+          top = Math.max(10, rect.top - menuHeight - 6);
+        }
+        if (left + menuWidth > window.innerWidth) {
+          left = Math.max(10, window.innerWidth - menuWidth - 16);
+        }
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+        menu.style.width = '';
       }
-      if (left + menuWidth > window.innerWidth) {
-        left = Math.max(10, window.innerWidth - menuWidth - 16);
-      }
-      menu.style.top = `${top}px`;
-      menu.style.left = `${left}px`;
       menu.style.display = 'flex';
 
       this.slashMenuIndex = 0;
@@ -1401,25 +1456,47 @@
       const collapseBtn = document.getElementById('sidebar-collapse-btn');
       const topbarToggleBtn = document.getElementById('topbar-toggle-sidebar');
       const mainArea = document.querySelector('.notes-main-area');
+      const backdrop = document.getElementById('notes-sidebar-backdrop');
 
-      // Auto-collapse sidebar on mobile screen on initial load
-      if (window.innerWidth <= 768 && sidebar) {
+      const updateBackdrop = () => {
+        if (!backdrop || !sidebar) return;
+        const isOverlay = window.innerWidth <= 1024;
+        const isOpen = !sidebar.classList.contains('collapsed');
+        if (isOverlay && isOpen) {
+          backdrop.classList.add('is-open');
+        } else {
+          backdrop.classList.remove('is-open');
+        }
+      };
+
+      // Auto-collapse sidebar on mobile/tablet screen on initial load
+      if (window.innerWidth <= 1024 && sidebar) {
         sidebar.classList.add('collapsed');
       }
 
       const toggleSidebar = () => {
-        if (sidebar) sidebar.classList.toggle('collapsed');
+        if (sidebar) {
+          sidebar.classList.toggle('collapsed');
+          updateBackdrop();
+        }
       };
 
       if (collapseBtn) collapseBtn.addEventListener('click', toggleSidebar);
       if (topbarToggleBtn) topbarToggleBtn.addEventListener('click', toggleSidebar);
+      if (backdrop) backdrop.addEventListener('click', () => {
+        if (sidebar) {
+          sidebar.classList.add('collapsed');
+          updateBackdrop();
+        }
+      });
 
-      // Mobile: Close sidebar when tapping outside on canvas
+      // Mobile/Tablet: Close sidebar when tapping outside on canvas
       if (mainArea) {
         mainArea.addEventListener('click', (e) => {
-          if (window.innerWidth <= 768 && sidebar && !sidebar.classList.contains('collapsed')) {
-            if (!e.target.closest('#topbar-toggle-sidebar')) {
+          if (window.innerWidth <= 1024 && sidebar && !sidebar.classList.contains('collapsed')) {
+            if (!e.target.closest('#topbar-toggle-sidebar') && !e.target.closest('#notes-sidebar')) {
               sidebar.classList.add('collapsed');
+              updateBackdrop();
             }
           }
         });
@@ -1432,6 +1509,30 @@
           toggleSidebar();
         }
       });
+
+      // Mobile Quick Formatting & Command Bar
+      const mobileFormatBar = document.getElementById('notes-mobile-format-bar');
+      if (mobileFormatBar) {
+        mobileFormatBar.querySelectorAll('.notes-mobile-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const action = btn.dataset.action;
+            if (action === 'slash') {
+              const slashMenu = document.getElementById('notion-slash-menu');
+              if (slashMenu && slashMenu.style.display === 'flex') {
+                this.hideSlashMenu();
+              } else {
+                const anchor = this.activeBlockEl || document.querySelector('.note-block') || document.body;
+                this.showSlashMenu(anchor);
+              }
+            } else if (action === 'ai-draft') {
+              this.runAiAssistance('draft');
+            } else if (action) {
+              this.insertBlockFromMobile(action);
+            }
+          });
+        });
+      }
 
       // 2. Add New Page Buttons
       const addPrivateBtn = document.getElementById('btn-add-private-page');

@@ -191,6 +191,9 @@
       </div>
     </aside>
 
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="notes-sidebar-backdrop" class="notes-sidebar-backdrop" aria-hidden="true"></div>
+
     <!-- ==========================================================================
          MAIN CANVAS & EDITOR VIEW
          ========================================================================== -->
@@ -512,6 +515,48 @@
       </div>
     </div>
   </div>
+
+  <!-- ==========================================================================
+       MOBILE FORMATTING & QUICK COMMANDS BAR (PHONES & TABLETS)
+       ========================================================================== -->
+  <nav id="notes-mobile-format-bar" class="notes-mobile-format-bar" role="toolbar" aria-label="Mobile Notes Quick Formatting Bar">
+    <button type="button" class="notes-mobile-btn" data-action="new-block" title="New Paragraph Block">
+      <span class="notes-btn-sym">T</span>
+      <span>Text</span>
+    </button>
+    <button type="button" class="notes-mobile-btn" data-action="todo" title="To-do Task">
+      <span class="notes-btn-sym">☑</span>
+      <span>Todo</span>
+    </button>
+    <button type="button" class="notes-mobile-btn" data-action="h1" title="Heading 1">
+      <span class="notes-btn-sym">H1</span>
+      <span>H1</span>
+    </button>
+    <button type="button" class="notes-mobile-btn" data-action="h2" title="Heading 2">
+      <span class="notes-btn-sym">H2</span>
+      <span>H2</span>
+    </button>
+    <button type="button" class="notes-mobile-btn" data-action="bullet" title="Bulleted List">
+      <span class="notes-btn-sym">•</span>
+      <span>Bullet</span>
+    </button>
+    <button type="button" class="notes-mobile-btn" data-action="callout" title="Callout Box">
+      <span class="notes-btn-sym">💡</span>
+      <span>Callout</span>
+    </button>
+    <button type="button" class="notes-mobile-btn" data-action="matrix" title="Eisenhower Matrix">
+      <span class="notes-btn-sym">🔲</span>
+      <span>Matrix</span>
+    </button>
+    <button type="button" class="notes-mobile-btn notes-mobile-slash-btn" data-action="slash" title="Commands Palette (/)">
+      <span class="notes-btn-sym font-mono">/</span>
+      <span>Commands</span>
+    </button>
+    <button type="button" class="notes-mobile-btn notes-mobile-ai-btn" data-action="ai-draft" title="Ask Aethera AI">
+      <span class="notes-btn-sym">✨</span>
+      <span>AI</span>
+    </button>
+  </nav>
 
   <!-- Core Scripts -->
   <script src="js/data.js?v=2.0.0"></script>
