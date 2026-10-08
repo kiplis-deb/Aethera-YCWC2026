@@ -1328,17 +1328,9 @@
   box-shadow: 0 0 12px rgba(6, 182, 212, 0.2);
 }
 
-.key-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #EAB308;
-  box-shadow: 0 0 6px #EAB308;
-}
-
+.key-status-dot,
 .key-status-dot.active {
-  background: #10B981;
-  box-shadow: 0 0 8px #10B981;
+  display: none !important;
 }
 
 /* In-Chat 401 Authorization Error Card */

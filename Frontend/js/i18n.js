@@ -551,8 +551,10 @@
       'chatbot.chip_plan': '📅 Plan Tomorrow',
       'chatbot.chip_study': '📚 Schedule Study',
       'chatbot.chip_chat': 'How\'s your day going?',
-      'chatbot.placeholder': 'Message Aethera...',
+      'chatbot.placeholder': 'Message Aethera... (type / for commands)',
       'chatbot.attach_title': 'Attach Image or Screenshot (or paste with Ctrl+V)',
+      'chatbot.slash_title': 'Commands',
+      'chatbot.slash_hint': '↑↓ Navigate • ↵ Select • Esc Close',
 
       // Learn Page (Academy)
       'learn.brand_title': 'Aethera Academy',
@@ -1220,8 +1222,10 @@
       'chatbot.chip_plan': '📅 Rencana Besok',
       'chatbot.chip_study': '📚 Jadwal Belajar',
       'chatbot.chip_chat': 'Bagaimana harimu?',
-      'chatbot.placeholder': 'Kirim pesan ke Aethera...',
+      'chatbot.placeholder': 'Kirim pesan ke Aethera... (ketik / untuk perintah)',
       'chatbot.attach_title': 'Lampirkan Gambar atau Tangkapan Layar (atau tempel dengan Ctrl+V)',
+      'chatbot.slash_title': 'Perintah',
+      'chatbot.slash_hint': '↑↓ Navigasi • ↵ Pilih • Esc Tutup',
 
       // Halaman Belajar (Akademi)
       'learn.brand_title': 'Akademi Aethera',

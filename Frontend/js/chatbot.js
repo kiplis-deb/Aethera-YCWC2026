@@ -94,7 +94,13 @@ class AetheraChatbot {
   }
 
   isId() {
-    return !!(window.aetheraI18n && window.aetheraI18n.currentLang === 'id');
+    if (typeof window !== 'undefined' && window.aetheraI18n && window.aetheraI18n.currentLang) {
+      return window.aetheraI18n.currentLang === 'id';
+    }
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('aethera_lang') === 'id') {
+      return true;
+    }
+    return this.currentLang === 'id';
   }
 
   renderWidget() {
@@ -179,6 +185,15 @@ class AetheraChatbot {
           </button>
         </div>
 
+        <!-- Interactive Slash Command Menu Popover -->
+        <div id="chatbot-slash-menu" class="chatbot-slash-menu" style="display: none;" role="listbox" aria-label="Slash commands">
+          <div class="chatbot-slash-menu-header">
+            <span class="chatbot-slash-menu-title" data-i18n="chatbot.slash_title">Commands</span>
+            <span class="chatbot-slash-menu-hint" data-i18n="chatbot.slash_hint">↑↓ Navigate • ↵ Select • Esc Close</span>
+          </div>
+          <div class="chatbot-slash-menu-list" id="chatbot-slash-list"></div>
+        </div>
+
         <!-- Input Area -->
         <div class="chatbot-input-area" id="chatbot-drop-zone">
           <button id="chatbot-attach-btn" class="chatbot-attach-btn" title="Attach Image or Screenshot (or paste with Ctrl+V)" data-i18n-title="chatbot.attach_title" type="button">
@@ -261,6 +276,7 @@ class AetheraChatbot {
 
     this.initWindowControls();
     this.initSuggestionsScroll();
+    this.initSlashMenu();
   }
 
   /* ==========================================================================
@@ -365,6 +381,221 @@ class AetheraChatbot {
     if (rightBtn) {
       rightBtn.classList.toggle('visible', suggestions.scrollLeft < maxScroll - 6);
     }
+  }
+
+  /* ==========================================================================
+     SLASH COMMANDS CONTROLLER (/plan, /note, /clear, /help)
+     ========================================================================== */
+  getSlashCommands() {
+    const isId = this.isId();
+    return [
+      {
+        command: '/plan',
+        badge: 'Calendar',
+        badgeClass: 'plan',
+        icon: '📅',
+        desc: isId ? 'Jadwalkan kegiatan atau susun rutinitas hari di Kalender' : 'Schedule events or plan day routine on Calendar',
+        example: isId ? 'e.g. /plan besok jam 14.00 belajar koding atau /plan buatkan rencana besok' : 'e.g. /plan tomorrow 2pm study or /plan make me a plan for tomorrow'
+      },
+      {
+        command: '/note',
+        badge: 'Notes',
+        badgeClass: 'note',
+        icon: '📝',
+        desc: isId ? 'Buat catatan terstruktur di ruang kerja Catatan' : 'Create structured note in Notes workspace',
+        example: isId ? 'e.g. /note Quantum Computing atau /note rangkuman materi fisika' : 'e.g. /note Quantum Computing or /note grocery list'
+      },
+      {
+        command: '/clear',
+        badge: 'Action',
+        badgeClass: 'clear',
+        icon: '🗑️',
+        desc: isId ? 'Hapus semua riwayat percakapan saat ini' : 'Clear current conversation messages',
+        example: '/clear'
+      },
+      {
+        command: '/help',
+        badge: 'Guide',
+        badgeClass: 'help',
+        icon: '💡',
+        desc: isId ? 'Panduan perintah /plan dan /note' : 'Guide for /plan and /note commands',
+        example: '/help'
+      }
+    ];
+  }
+
+  initSlashMenu() {
+    const input = document.getElementById('chatbot-input');
+    const menu = document.getElementById('chatbot-slash-menu');
+    const list = document.getElementById('chatbot-slash-list');
+    if (!input || !menu || !list) return;
+
+    this.slashActiveIndex = 0;
+    this.slashFilteredCommands = [];
+    this.slashMenuVisible = false;
+
+    input.addEventListener('input', () => {
+      const val = input.value;
+      if (val.startsWith('/')) {
+        if (val.includes(' ')) {
+          this.hideSlashMenu();
+        } else {
+          this.showSlashMenu(val);
+        }
+      } else {
+        this.hideSlashMenu();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (!this.slashMenuVisible || !this.slashFilteredCommands || this.slashFilteredCommands.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.navigateSlashMenu(1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.navigateSlashMenu(-1);
+      } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+        const val = input.value.trim();
+        if (!val.includes(' ')) {
+          e.preventDefault();
+          this.selectSlashCommand(this.slashFilteredCommands[this.slashActiveIndex]);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this.hideSlashMenu();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (this.slashMenuVisible && !menu.contains(e.target) && e.target !== input) {
+        this.hideSlashMenu();
+      }
+    });
+  }
+
+  showSlashMenu(filterText = '/') {
+    const menu = document.getElementById('chatbot-slash-menu');
+    const list = document.getElementById('chatbot-slash-list');
+    if (!menu || !list) return;
+
+    const allCommands = this.getSlashCommands();
+    const query = filterText.toLowerCase().replace(/^\//, '').trim();
+
+    this.slashFilteredCommands = allCommands.filter(c => {
+      if (!query) return true;
+      const cmdName = c.command.toLowerCase().replace(/^\//, '');
+      return cmdName.startsWith(query) || c.command.toLowerCase().includes(query);
+    });
+
+    if (this.slashFilteredCommands.length === 0) {
+      this.hideSlashMenu();
+      return;
+    }
+
+    this.slashActiveIndex = 0;
+    list.innerHTML = this.slashFilteredCommands.map((c, i) => `
+      <div class="chatbot-slash-item ${i === 0 ? 'active' : ''}" data-index="${i}" data-command="${c.command}">
+        <div class="chatbot-slash-item-icon ${c.badgeClass}">${c.icon}</div>
+        <div class="chatbot-slash-item-info">
+          <div class="chatbot-slash-item-name">
+            <span class="cmd-text">${c.command}</span>
+            <span class="cmd-badge ${c.badgeClass}">${c.badge}</span>
+          </div>
+          <div class="chatbot-slash-item-desc">${this.escapeHtml(c.desc)}</div>
+          ${c.example ? `<div class="chatbot-slash-item-example">${this.escapeHtml(c.example)}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    list.querySelectorAll('.chatbot-slash-item').forEach(itemEl => {
+      itemEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(itemEl.getAttribute('data-index'), 10);
+        const cmd = this.slashFilteredCommands[idx];
+        if (cmd) this.selectSlashCommand(cmd);
+      });
+    });
+
+    menu.style.display = 'flex';
+    this.slashMenuVisible = true;
+  }
+
+  hideSlashMenu() {
+    const menu = document.getElementById('chatbot-slash-menu');
+    if (menu) menu.style.display = 'none';
+    this.slashMenuVisible = false;
+  }
+
+  navigateSlashMenu(direction) {
+    if (!this.slashFilteredCommands || !this.slashFilteredCommands.length) return;
+    const list = document.getElementById('chatbot-slash-list');
+    if (!list) return;
+
+    const items = list.querySelectorAll('.chatbot-slash-item');
+    items.forEach(el => el.classList.remove('active'));
+
+    this.slashActiveIndex = (this.slashActiveIndex + direction + this.slashFilteredCommands.length) % this.slashFilteredCommands.length;
+    const activeEl = items[this.slashActiveIndex];
+    if (activeEl) {
+      activeEl.classList.add('active');
+      activeEl.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  selectSlashCommand(cmd) {
+    if (!cmd) return;
+    const input = document.getElementById('chatbot-input');
+    if (!input) return;
+
+    if (cmd.command === '/clear') {
+      this.hideSlashMenu();
+      input.value = '';
+      this.clearChat();
+      return;
+    }
+
+    if (cmd.command === '/help') {
+      this.hideSlashMenu();
+      input.value = '';
+      this.renderHelpMessage();
+      return;
+    }
+
+    input.value = cmd.command + ' ';
+    this.hideSlashMenu();
+    input.focus();
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 90)}px`;
+  }
+
+  renderHelpMessage() {
+    const isId = this.isId();
+    const reply = isId
+      ? `### Panduan Perintah Cepat Aethera 🚀\n\nAnda dapat menggunakan perintah slash berikut langsung di chat:\n\n* **\`/plan [jadwal / kegiatan]\`** — Rencanakan kegiatan atau susun rutinitas hari cerdas di Kalender Aethera.\n  * Contoh: \`/plan besok jam 14.00 belajar koding\`\n  * Contoh: \`/plan buatkan rencana untuk besok\` *(menyusun jadwal harian produktif lengkap)*\n* **\`/note [topik / rincian]\`** — Buat catatan terstruktur bergaya Notion di ruang kerja Catatan Anda.\n  * Contoh: \`/note Rangkuman Kecerdasan Buatan\`\n  * Contoh: \`/note Daftar belanja: beras, telur, susu, kopi\`\n* **\`/clear\`** — Hapus riwayat obrolan saat ini.\n* **\`/help\`** — Tampilkan panduan ini.\n\n*Perintah dapat ditulis dalam Bahasa Indonesia maupun English!*`
+      : `### Aethera Quick Slash Commands 🚀\n\nYou can use these slash commands directly in the chat:\n\n* **\`/plan [activity / schedule]\`** — Schedule events or generate a smart day routine on your Aethera Calendar.\n  * Example: \`/plan tomorrow 2pm study session\`\n  * Example: \`/plan make me a plan for tomorrow\` *(creates a balanced multi-block daily schedule)*\n* **\`/note [topic / details]\`** — Create a structured Notion-style note in your Aethera Notes workspace.\n  * Example: \`/note Quantum Computing notes\`\n  * Example: \`/note Grocery list: milk, eggs, bread\`\n* **\`/clear\`** — Clear current conversation messages.\n* **\`/help\`** — Show this command reference.\n\n*Commands work seamlessly in English and Bahasa Indonesia!*`;
+
+    this.appendMessage('bot', reply, null, false);
+    this.history.push({ role: 'model', parts: [{ text: reply }] });
+  }
+
+  renderCommandGuide(cmd) {
+    const isId = this.isId();
+    let reply = '';
+    if (cmd === '/plan') {
+      reply = isId
+        ? `**Bagaimana Anda ingin merencanakan jadwal Anda?** 📅\n\nSebutkan tanggal, waktu, atau kegiatan yang ingin direncanakan, contohnya:\n• \`/plan besok jam 14.00 belajar koding\`\n• \`/plan Jumat jam 10.00 rapat tim\`\n• \`/plan buatkan rencana untuk besok\` *(menyusun jadwal harian produktif terstruktur)*\n\nKetik rincian rencana Anda dan saya akan menambahkannya langsung ke kalender!`
+        : `**How would you like to plan your schedule?** 📅\n\nSpecify the date, time, or activity, for example:\n• \`/plan tomorrow 2pm study session\`\n• \`/plan Friday 10:00 team sync\`\n• \`/plan make me a plan for tomorrow\` *(schedules a balanced full-day focus routine)*\n\nType your plan details and I'll place it straight on your calendar!`;
+    } else if (cmd === '/note') {
+      reply = isId
+        ? `**Apa catatan yang ingin Anda buat?** 📝\n\nSebutkan topik, judul, atau daftar isi catatan, contohnya:\n• \`/note Ringkasan Kecerdasan Buatan & Machine Learning\`\n• \`/note Daftar belanja: beras, telur, susu, roti\`\n• \`/note Rencana proyek dan milestone\`\n\nTuliskan topik catatan Anda dan saya akan menyusunnya ke ruang kerja Catatan!`
+        : `**What note would you like to create?** 📝\n\nSpecify the topic, title, or checklist, for example:\n• \`/note Quantum Computing fundamentals\`\n• \`/note Grocery list: milk, oats, eggs, apples\`\n• \`/note Project roadmap with 4 milestones\`\n\nType your note topic and I'll generate it directly into your Aethera Notes workspace!`;
+    }
+
+    this.appendMessage('bot', reply, null, false);
+    this.history.push({ role: 'model', parts: [{ text: reply }] });
   }
 
   /* ==========================================================================
@@ -909,17 +1140,42 @@ class AetheraChatbot {
     const input = document.getElementById('chatbot-input');
     if (!input || this.isGenerating) return;
 
+    if (this.slashMenuVisible) {
+      this.hideSlashMenu();
+    }
+
     const text = input.value.trim();
     const image = this.currentImage;
 
     if (!text && !image) return;
 
-    this.lastUserQuery = text || "Analyze this attached image.";
-
     // Reset input field & image preview
     input.value = '';
     input.style.height = 'auto';
     this.clearAttachedImage();
+
+    // Check for direct slash commands executed without arguments
+    if (text === '/clear') {
+      this.clearChat();
+      return;
+    }
+
+    if (text === '/help') {
+      this.renderHelpMessage();
+      return;
+    }
+
+    if (text === '/plan') {
+      this.renderCommandGuide('/plan');
+      return;
+    }
+
+    if (text === '/note') {
+      this.renderCommandGuide('/note');
+      return;
+    }
+
+    this.lastUserQuery = text || "Analyze this attached image.";
 
     // 1. Render User Message
     this.appendMessage('user', text || 'Sent an image attachment', image, false);
@@ -935,7 +1191,15 @@ class AetheraChatbot {
       });
     }
     if (text) {
-      userParts.push({ text: text });
+      let promptTextForAI = text;
+      if (text.toLowerCase().startsWith('/plan')) {
+        const cleanArg = text.replace(/^\/plan\b[:\s-]*/i, '').trim();
+        promptTextForAI = `[USER COMMAND: /plan - CALENDAR SCHEDULER]\nUser instruction: "${cleanArg}"\n(You MUST schedule this on the user's Aethera Calendar and output a \`\`\`calendar_plan JSON block. CRITICAL: NEVER name the event after the prompt or command (e.g. NEVER "Make me a plan for tomorrow", "Plan tomorrow", "Buatkan rencana besok"). If user asks generally to plan their day, generate a realistic 4-6 block daily schedule. If user specifies an activity, extract only the clean activity name as the title.)`;
+      } else if (text.toLowerCase().startsWith('/note')) {
+        const cleanArg = text.replace(/^\/note\b[:\s-]*/i, '').trim();
+        promptTextForAI = `[USER COMMAND: /note - WORKSPACE NOTE CREATOR]\nUser instruction: "${cleanArg}"\n(You MUST create a structured note in Aethera Notes workspace and output a \`\`\`note_creation JSON block. CRITICAL: NEVER name the note after the prompt phrase (e.g. NEVER "Make me a note about...", "Catatan tentang..."). Extract a clean, concise, descriptive title.)`;
+      }
+      userParts.push({ text: promptTextForAI });
     } else if (image) {
       userParts.push({ text: "Please inspect, describe, and solve or extract everything from this attached image." });
     }
@@ -1165,6 +1429,14 @@ class AetheraChatbot {
       } else if (this.isPlanningQuery(text)) {
         const targetDate = this.parseNaturalDate(text);
         planEvents = this.extractScheduleEvents(botReply, targetDate);
+        if (!planEvents || planEvents.length === 0) {
+          const sim = this.generateSimulatedPlan(text);
+          planEvents = sim.events;
+        }
+      }
+
+      if (planEvents && planEvents.length > 0) {
+        planEvents = this.sanitizeCalendarPlanEvents(planEvents, text);
       }
 
       // Check for structured note creation
@@ -1181,6 +1453,13 @@ class AetheraChatbot {
         }
       } else if (this.isNoteCreationQuery(text)) {
         noteToCreate = this.extractNoteDataFromText(text, botReply);
+        if (!noteToCreate) {
+          noteToCreate = this.generateSimulatedNote(text, botReply).note;
+        }
+      }
+
+      if (noteToCreate) {
+        noteToCreate.title = this.sanitizeNoteTitle(noteToCreate.title, text);
       }
 
       this.history.push({
@@ -1494,7 +1773,7 @@ CURRENT REAL-WORLD DATE & TIME CONTEXT:
 
 INTEGRATED AETHERA CALENDAR & SCHEDULER:
 You are directly connected to the user's interactive Aethera Calendar.
-When the user asks you to make a plan, schedule an event or task, organize their day, or add items to their calendar for a specific date or hours (e.g. "plan a meeting tomorrow at 3pm", "make a plan for tomorrow: 9am deep work, 2pm gym", "schedule study session on Friday from 10 to 12", "put workout on my calendar today at 6pm"):
+When the user asks you to make a plan, schedule an event or task, organize their day, or add items to their calendar for a specific date or hours (or uses the /plan slash command):
 1. Respond warmly and conversationally confirming that you've planned and added it to their calendar.
 2. At the very end of your response, output a structured JSON block tagged with \`\`\`calendar_plan:
 \`\`\`calendar_plan
@@ -1515,13 +1794,26 @@ Rules for calendar_plan:
 - Always resolve relative dates ("tomorrow", "Monday", "next week", "today") to exact YYYY-MM-DD based on today (${isoDate}).
 - Times must be in 24-hour format HH:MM (e.g. "09:00", "14:30"). If only a start time is given, set endTime 1 hour later.
 - Categories: "deep-work" (focus/coding/design), "meeting" (calls/syncs), "study" (learning/homework/exams), "deadline" (deliverables/urgent), "personal" (meals/gym/wellness/rest), "work" (general professional tasks).
+- CRITICAL TITLE RULE (NEVER SOUND "STUPID"):
+  * NEVER EVER use the user's prompt or meta-request phrasing as the event title! (e.g. NEVER "Make me a plan for tomorrow", "Make a plan for tommorow", "Plan tomorrow", "Buatkan rencana besok", "Jadwal besok", "Plan my day", "My schedule").
+  * If the user asks generally to plan their day (e.g. "/plan make me a plan for tomorrow" or "/plan buatkan rencana untuk besok"), generate a realistic, balanced multi-block daily schedule with 4-6 focused sessions:
+    1. Morning Focus & Planning (08:30 - 09:30)
+    2. Deep Work // Core Execution (09:30 - 12:00)
+    3. Lunch & Recharge (12:00 - 13:00)
+    4. Team Sync & Collaboration (13:00 - 14:30)
+    5. Project Tasks & Implementation (14:30 - 16:30)
+    6. Daily Review & Reflection (16:30 - 17:30)
+  * If the user specifies an activity (e.g. "/plan tomorrow 2pm study math" or "/plan besok jam 14.00 belajar kalkulus"), extract only the clean activity name: "Study Math" / "Belajar Kalkulus".
 - ONLY output the \`\`\`calendar_plan block if the user specifically asked to plan, schedule, or put events on their calendar.
 
 INTEGRATED AETHERA NOTES WORKSPACE:
 You are directly connected to the user's interactive Aethera Notes workspace.
-When the user asks, commands, or instructs you to create, make, take, draft, or write a note (e.g. "make a note about X", "create a note called Grocery List with milk, eggs, bread", "take a note: call doctor tomorrow", "draft meeting notes for project sync", "buat catatan tentang ...", "catat ini ..."):
+When the user asks, commands, or instructs you to create, make, take, draft, or write a note (or uses the /note slash command):
 1. Formulate a rich, well-organized note structure with a clear descriptive title, an appropriate emoji icon, and high-quality structured content blocks.
-2. At the very end of your response, output a structured JSON block tagged with \`\`\`note_creation:
+2. CRITICAL TITLE RULE FOR NOTES:
+  * NEVER name the note after the prompt phrasing (e.g. NEVER "Make me a note about quantum computing", "Buatkan catatan tentang AI", "Create a note for grocery list", "Take a note").
+  * Distill the title into a clean, concise, capitalized topic name (e.g. "Quantum Computing", "Kecerdasan Buatan (AI)", "Grocery List").
+3. At the very end of your response, output a structured JSON block tagged with \`\`\`note_creation:
 \`\`\`note_creation
 {
   "title": "Clear Note Title",
@@ -1538,13 +1830,14 @@ When the user asks, commands, or instructs you to create, make, take, draft, or 
 }
 \`\`\`
 Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (bullet list), "number" (numbered list), "todo" (checklist with checked boolean), "callout" (callout box with emoji icon), "code" (code snippet), "divider" (horizontal line).
-3. Confirm in your conversational reply that you've created the note and placed it directly into their Aethera Notes workspace.
+4. Confirm in your conversational reply that you've created the note and placed it directly into their Aethera Notes workspace.
 - ONLY output the \`\`\`note_creation block if the user specifically asked to create or take a note.`;
   }
 
   isPlanningQuery(text) {
     if (!text || typeof text !== 'string') return false;
-    const lower = text.toLowerCase();
+    const lower = text.toLowerCase().trim();
+    if (lower.startsWith('/plan')) return true;
 
     const planKeywords = [
       'plan', 'schedule', 'calendar', 'put on my calendar', 'put it on my calendar',
@@ -1650,14 +1943,15 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
   }
 
   parseTimes(text) {
-    const rangeMatch = text.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+    const rangeMatch = text.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)\s*(?:-|–|—|to|until|sampai)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)/i);
     if (rangeMatch) {
       const start = this.normalizeTime(rangeMatch[1]);
       const end = this.normalizeTime(rangeMatch[2]);
       return { startTime: start, endTime: end };
     }
-    const singleMatch = text.match(/(?:at|for|around|pukul|jam)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i) ||
-                        text.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i);
+    const singleMatch = text.match(/(?:at|for|around|pukul|jam)\s+(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?)/i) ||
+                        text.match(/\b(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam))\b/i) ||
+                        text.match(/\b(\d{1,2}[:.]\d{2})\b/);
     if (singleMatch) {
       const start = this.normalizeTime(singleMatch[1]);
       const [hh, mm] = start.split(':').map(Number);
@@ -1669,13 +1963,16 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
 
   normalizeTime(str) {
     if (!str) return '09:00';
-    const m = str.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    let s = str.trim().toLowerCase().replace('.', ':');
+    const m = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm|pagi|siang|sore|malam)?$/i);
     if (!m) return '09:00';
     let h = parseInt(m[1], 10);
     const mins = m[2] || '00';
-    const ampm = m[3] ? m[3].toLowerCase() : null;
-    if (ampm === 'pm' && h < 12) h += 12;
-    if (ampm === 'am' && h === 12) h = 0;
+    const modifier = m[3] ? m[3].toLowerCase() : null;
+    if (modifier === 'pm' && h < 12) h += 12;
+    if (modifier === 'am' && h === 12) h = 0;
+    if ((modifier === 'siang' || modifier === 'sore' || modifier === 'malam') && h < 12) h += 12;
+    if (modifier === 'pagi' && h === 12) h = 0;
     return `${String(h).padStart(2, '0')}:${mins}`;
   }
 
@@ -1711,13 +2008,17 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
     if (!query) return '';
     let s = query.trim();
 
+    // 0. Remove slash command prefix
+    s = s.replace(/^\/plan\b[:\s-]*/gi, '');
+    s = s.replace(/^\/note\b[:\s-]*/gi, '');
+
     // 1. Remove common conversational greetings and lead-ins
     s = s.replace(/^(hey|hi|hello|halo|tolong|please|can you(?: please)?|could you(?: please)?|would you(?: please)?|i want you to|i need you to|i want to|i need to|help me)\b\s*/gi, '');
 
     // 2. Remove schedule/plan creation commands in English and Indonesian
     s = s.replace(/\b(make|create|set\s+up|set|build|put|add|organize|generate|draft)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?(?:schedule|calendar|plan|agenda|timeline|time\s*table|to-?do)\b/gi, '');
     s = s.replace(/\b(schedule|plan)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?/gi, '');
-    s = s.replace(/\b(?:tolong\s+)?(?:buatkan|buat|bikin|jadwalkan|rencanakan|masukkan\s+ke)\s*(?:saya\s+)?(?:jadwal|agenda|rencana|kalender)?\b/gi, '');
+    s = s.replace(/\b(?:tolong\s+)?(?:buatkan|buat|bikin|jadwalkan|susun|rencanakan|masukkan\s+ke)\s*(?:saya\s+)?(?:sebuah\s+)?(?:jadwal|agenda|rencana|kalender)?\b/gi, '');
 
     // 3. Remove calendar destinations
     s = s.replace(/\b(to|on|in|into)\s+(?:my\s+|the\s+)?calendar\b/gi, '');
@@ -1735,42 +2036,214 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
     s = s.replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?\b/gi, '');
     s = s.replace(/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/gi, '');
 
-    // 7. Remove time ranges and single times
-    s = s.replace(/(?:from\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:-|–|—|to|until|sampai)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '');
-    s = s.replace(/(?:at|around|pada|jam|pukul)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?/gi, '');
-    s = s.replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, '');
+    // 7. Remove time ranges and single times (supporting : and . and Indonesian morning/afternoon/night)
+    s = s.replace(/(?:from\s+)?\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?\s*(?:-|–|—|to|until|sampai)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?/gi, '');
+    s = s.replace(/(?:at|around|pada|jam|pukul)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)?/gi, '');
+    s = s.replace(/\b\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)\b/gi, '');
 
-    // 8. Remove connecting prepositions, colons, or punctuation at start or end
-    s = s.replace(/^[\s,;:–—\-_/|*•#]+/g, '');
-    s = s.replace(/[\s,;:–—\-_/|*•#?!.]+$/g, '');
-    s = s.replace(/^(?:for|about|regarding|to|on|at|of|with|untuk|tentang|soal|buat)\s+/i, '');
-    s = s.replace(/^(?:meeting|session|call|event|review)\s+(?:for|about|with|on)\s+/i, '');
-    s = s.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
+    // 8. Remove isolated connecting prepositions and conjunctions
+    s = s.replace(/\b(?:for|about|regarding|to|on|at|of|with|untuk|tentang|soal|buat)\b/gi, '');
+    s = s.replace(/\b(?:meeting|session|call|event|review)\s+(?:for|about|with|on)\b/gi, '');
 
-    if (!s) return '';
-    return s.split(/\s+/)
-      .filter(w => w.length > 0)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
+    // 9. Remove punctuation/symbols and trim
+    s = s.replace(/^[\s,;:–—\-_/|*•#?!.]+|[\s,;:–—\-_/|*•#?!.]+$/g, '').trim();
+
+    if (!s || this.isMetaPlanTitle(s)) return '';
+
+    return this.formatTitleCasing(s);
+  }
+
+  isMetaPlanTitle(title) {
+    if (!title || typeof title !== 'string') return true;
+    const lower = title.toLowerCase().trim();
+    if (lower.length < 2) return true;
+    if (/^\/?plan\b/i.test(lower)) return true;
+    if (/^(?:plan|schedule|calendar|activity|session|task|event|agenda|jadwal|rencana|kegiatan|acara|for|untuk|buat|besok|tomorrow|today|hari\s*ini|pagi|siang|sore|malam)$/i.test(lower)) return true;
+
+    const metaPhrases = [
+      /make\s+(?:me\s+)?(?:a\s+)?plan/i,
+      /create\s+(?:a\s+)?plan/i,
+      /set\s*up\s+(?:a\s+)?plan/i,
+      /plan\s+(?:for\s+)?(?:tomorrow|tommorow|today|the\s+day|my\s+day)/i,
+      /plan\s+(?:tomorrow|tommorow|today)/i,
+      /my\s+schedule/i,
+      /schedule\s+(?:for\s+)?(?:tomorrow|tommorow|today)/i,
+      /schedule\s+(?:tomorrow|tommorow)/i,
+      /buatkan\s+(?:saya\s+)?(?:sebuah\s+)?(?:rencana|jadwal)/i,
+      /buat\s+(?:sebuah\s+)?(?:rencana|jadwal)/i,
+      /rencana\s+(?:untuk\s+)?besok/i,
+      /rencana\s+besok/i,
+      /jadwal\s+besok/i,
+      /susun\s+(?:jadwal|rencana)/i,
+      /jadwalkan\s+(?:besok|hari\s+ini)/i
+    ];
+
+    return metaPhrases.some(rgx => rgx.test(lower));
+  }
+
+  isMetaNoteTitle(title) {
+    if (!title || typeof title !== 'string') return true;
+    const lower = title.toLowerCase().trim();
+    if (lower.length < 2) return true;
+    if (/^\/?note\b/i.test(lower)) return true;
+    if (/^(?:note|notes|quick\s*note|new\s*note|untitled|untitled\s*note|catatan|catatan\s*baru|tentang|about|for|untuk)$/i.test(lower)) return true;
+
+    const metaPhrases = [
+      /make\s+(?:me\s+)?(?:a\s+)?note/i,
+      /take\s+(?:a\s+)?note/i,
+      /create\s+(?:a\s+)?note/i,
+      /draft\s+(?:a\s+)?note/i,
+      /write\s+(?:a\s+)?note/i,
+      /note\s+(?:about|on|for|regarding)/i,
+      /buatkan\s+(?:saya\s+)?(?:sebuah\s+)?catatan/i,
+      /buat\s+(?:sebuah\s+)?catatan/i,
+      /catatan\s+(?:tentang|mengenai|soal|untuk)/i,
+      /tulis\s+catatan/i,
+      /catat\s+(?:ini|tentang)/i
+    ];
+
+    return metaPhrases.some(rgx => rgx.test(lower));
+  }
+
+  formatTitleCasing(text) {
+    if (!text) return '';
+    const acronyms = new Set(['ai', 'ml', 'ui', 'ux', 'api', 'css', 'html', 'gpu', 'cpu', 'db', 'os', 'iot', 'llm', 'id', 'pr']);
+    return text.split(/\s+/).map((w, idx) => {
+      const lowerW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (acronyms.has(lowerW)) {
+        return w.toUpperCase();
+      }
+      if (idx > 0 && w.length <= 3 && /^(dan|di|ke|of|in|on|at|to|a|an|the|for)$/i.test(w)) {
+        return w.toLowerCase();
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(' ');
+  }
+
+  sanitizeEventTitle(rawTitle, query = '') {
+    const isId = this.isId();
+    let t = (rawTitle || '').trim();
+    t = t.replace(/^["'`]+|["'`]+$/g, '').trim();
+    t = t.replace(/^\/plan\b[:\s-]*/i, '').trim();
+
+    if (t && !this.isMetaPlanTitle(t)) {
+      return this.formatTitleCasing(t);
+    }
+
+    // Attempt to extract clean subject from query
+    if (query) {
+      const extracted = this.extractScheduleSubject(query);
+      if (extracted && extracted.length >= 2 && !this.isMetaPlanTitle(extracted)) {
+        return this.formatTitleCasing(extracted);
+      }
+    }
+
+    // If still meta/generic, synthesize intelligent title based on category/context
+    const cat = this.inferCategory(query || rawTitle || '');
+    switch (cat) {
+      case 'deep-work': return isId ? 'Sesi Fokus Mendalam' : 'Deep Work Session';
+      case 'meeting': return isId ? 'Koordinasi & Rapat' : 'Team Sync & Meeting';
+      case 'study': return isId ? 'Sesi Belajar & Penguasaan Materi' : 'Study & Learning Session';
+      case 'deadline': return isId ? 'Target Penyelesaian Penting' : 'Priority Milestone Execution';
+      case 'personal': return isId ? 'Istirahat & Pemulihan Energi' : 'Wellness & Recharge Break';
+      default: return isId ? 'Sesi Kerja Fokus' : 'Productive Focus Session';
+    }
+  }
+
+  sanitizeNoteTitle(rawTitle, query = '') {
+    const isId = this.isId();
+    let t = (rawTitle || '').trim();
+    t = t.replace(/^["'`]+|["'`]+$/g, '').trim();
+    t = t.replace(/^\/note\b[:\s-]*/i, '').trim();
+
+    // Clean common lead-in fluff
+    t = t.replace(/^(?:can you\s+)?(?:please\s+)?(?:make|create|take|write|draft|add|generate|jot\s*down)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?(?:new\s+)?(?:note|notes)\s*(?:about|for|on|regarding|titled|called|:|-)?\s*/gi, '');
+    t = t.replace(/^(?:tolong\s+)?(?:buatkan|buat|bikin|tuliskan|tulis|catat(?:kan)?)\s*(?:saya\s+)?(?:sebuah\s+)?(?:catatan|note|notes)\s*(?:tentang|mengenai|soal|untuk|berjudul|:|-)?\s*/gi, '');
+    t = t.replace(/^(?:catatan\s+(?:tentang|mengenai|soal|untuk)\s+)/gi, '');
+    t = t.replace(/^(?:note\s+(?:about|on|for|regarding)\s+)/gi, '');
+    t = t.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
+
+    if (t && !this.isMetaNoteTitle(t)) {
+      return this.formatTitleCasing(t);
+    }
+
+    // Try extracting subject from query
+    if (query) {
+      let q = query.trim().replace(/^\/note\b[:\s-]*/i, '').trim();
+      q = q.replace(/^(?:can you\s+)?(?:please\s+)?(?:make|create|take|write|draft|add|generate|jot\s*down)\s+(?:me\s+)?(?:a\s+|an\s+|the\s+)?(?:new\s+)?(?:note|notes)\s*(?:about|for|on|regarding|titled|called|:|-)?\s*/gi, '');
+      q = q.replace(/^(?:tolong\s+)?(?:buatkan|buat|bikin|tuliskan|tulis|catat(?:kan)?)\s*(?:saya\s+)?(?:sebuah\s+)?(?:catatan|note|notes)\s*(?:tentang|mengenai|soal|untuk|berjudul|:|-)?\s*/gi, '');
+      q = q.replace(/^(?:catatan\s+(?:tentang|mengenai|soal|untuk)\s+)/gi, '');
+      q = q.replace(/^(?:note\s+(?:about|on|for|regarding)\s+)/gi, '');
+      q = q.replace(/^[:\-\s]+|[:\-\s]+$/g, '').trim();
+      if (q && !this.isMetaNoteTitle(q)) {
+        return this.formatTitleCasing(q);
+      }
+    }
+
+    return isId ? 'Catatan Kerja' : 'Workspace Note';
+  }
+
+  sanitizeCalendarPlanEvents(events, userQuery) {
+    if (!events || !events.length) return [];
+    const isId = this.isId();
+    const targetDate = this.parseNaturalDate(userQuery);
+
+    const lowerQ = (userQuery || '').toLowerCase();
+    const isGeneralDayPlanRequest =
+      /make\s+(?:me\s+)?(?:a\s+)?plan/i.test(lowerQ) ||
+      /plan\s+(?:for\s+)?(?:tomorrow|tommorow|today|my\s+day)/i.test(lowerQ) ||
+      /buatkan\s+(?:saya\s+)?(?:sebuah\s+)?(?:rencana|jadwal)/i.test(lowerQ) ||
+      /rencana\s+besok/i.test(lowerQ) ||
+      /jadwal\s+besok/i.test(lowerQ);
+
+    const hasSpecificActivity = this.extractScheduleSubject(userQuery).length > 2;
+
+    if (events.length === 1 && (this.isMetaPlanTitle(events[0].title) || (isGeneralDayPlanRequest && !hasSpecificActivity))) {
+      const template = isId ? [
+        { title: 'Fokus Pagi & Persiapan Hari', start: '08:30', end: '09:30', cat: 'personal', prio: 'Q4', quad: 'Tidak Mendesak, Tidak Penting' },
+        { title: 'Sesi Fokus Mendalam // Target Inti', start: '09:30', end: '12:00', cat: 'deep-work', prio: 'Q2', quad: 'Penting, Tidak Mendesak' },
+        { title: 'Istirahat Siang & Pemulihan Energi', start: '12:00', end: '13:00', cat: 'personal', prio: 'Q4', quad: 'Tidak Mendesak, Tidak Penting' },
+        { title: 'Sinkronisasi Tim & Koordinasi', start: '13:00', end: '14:30', cat: 'meeting', prio: 'Q3', quad: 'Mendesak, Tidak Penting' },
+        { title: 'Eksekusi & Implementasi Tugas', start: '14:30', end: '16:30', cat: 'work', prio: 'Q2', quad: 'Penting, Tidak Mendesak' },
+        { title: 'Evaluasi Harian & Pembelajaran', start: '16:30', end: '17:30', cat: 'study', prio: 'Q2', quad: 'Penting, Tidak Mendesak' }
+      ] : [
+        { title: 'Morning Focus & Day Setup', start: '08:30', end: '09:30', cat: 'personal', prio: 'Q4', quad: 'Not Urgent, Not Important' },
+        { title: 'Deep Work Session // Core Objectives', start: '09:30', end: '12:00', cat: 'deep-work', prio: 'Q2', quad: 'Important, Not Urgent' },
+        { title: 'Lunch Break & Mind Recharge', start: '12:00', end: '13:00', cat: 'personal', prio: 'Q4', quad: 'Not Urgent, Not Important' },
+        { title: 'Team Sync & Project Coordination', start: '13:00', end: '14:30', cat: 'meeting', prio: 'Q3', quad: 'Urgent, Not Important' },
+        { title: 'Implementation & Deliverables Execution', start: '14:30', end: '16:30', cat: 'work', prio: 'Q2', quad: 'Important, Not Urgent' },
+        { title: 'Daily Review & Learning Wrap-up', start: '16:30', end: '17:30', cat: 'study', prio: 'Q2', quad: 'Important, Not Urgent' }
+      ];
+
+      return template.map(t => ({
+        id: 'evt_' + Math.random().toString(36).substr(2, 9),
+        title: t.title,
+        date: targetDate,
+        startTime: t.start,
+        endTime: t.end,
+        category: t.cat,
+        priority: t.prio,
+        quadrant: t.quad,
+        notes: isId ? 'Direncanakan lewat Asisten Aethera' : 'Planned via Aethera Assistant',
+        completed: false,
+        createdAt: new Date().toISOString()
+      }));
+    }
+
+    return events.map(e => ({
+      ...e,
+      title: this.sanitizeEventTitle(e.title, userQuery)
+    }));
   }
 
   cleanEventTitle(raw) {
-    if (!raw) return 'Scheduled Activity';
-    const extracted = this.extractScheduleSubject(raw);
-    if (extracted && extracted.length >= 2 && !/^(plan|schedule|calendar|activity|session)$/i.test(extracted)) {
-      return extracted;
-    }
-    let s = raw.trim()
-      .replace(/^[\s,;:–—\-_/|*•#]+|[\s,;:–—\-_/|*•#?!.]+$/g, '')
-      .replace(/^(?:to|for|about|on|at|untuk)\s+/i, '')
-      .trim();
-    if (!s) return 'Scheduled Activity';
-    return s.charAt(0).toUpperCase() + s.slice(1);
+    return this.sanitizeEventTitle(raw);
   }
 
   generateSimulatedPlan(query) {
     const isId = this.isId();
-    const targetDate = this.parseNaturalDate(query);
+    const cleanQuery = (query || '').replace(/^\/plan\b[:\s-]*/i, '').trim();
+    const targetDate = this.parseNaturalDate(cleanQuery || query);
     const dateObj = new Date(targetDate + 'T12:00:00');
     const formattedDate = dateObj.toLocaleDateString(isId ? 'id-ID' : 'en-US', {
       weekday: 'long',
@@ -1780,7 +2253,7 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
     });
 
     // 1. Check for multiple events separated by comma, '&', 'and', or newlines
-    const tokens = query.split(/(?:,\s*|\s+and\s+|\s*&\s*|\n+)(?=\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+    const tokens = cleanQuery.split(/(?:,\s*|\s+and\s+|\s*&\s*|\n+)(?=\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
     let events = [];
 
     if (tokens.length >= 2) {
@@ -1790,9 +2263,9 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
           const rawTime1 = m[1];
           const rawTime2 = m[2];
           const rawActivity = m[3];
-          const title = this.cleanEventTitle(rawActivity);
+          const title = this.sanitizeEventTitle(rawActivity, cleanQuery);
 
-          if (title.length >= 2 && !/^(tomorrow|today|tonight|next week|plan|schedule)$/i.test(title)) {
+          if (title.length >= 2 && !this.isMetaPlanTitle(title)) {
             const startTime = this.normalizeTime(rawTime1);
             let endTime = rawTime2 ? this.normalizeTime(rawTime2) : null;
             if (!endTime) {
@@ -1820,12 +2293,11 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
     }
 
     if (events.length === 0) {
-      const times = this.parseTimes(query);
-      const subject = this.extractScheduleSubject(query);
+      const times = this.parseTimes(cleanQuery);
+      const subject = this.extractScheduleSubject(cleanQuery);
 
-      // If user specified an explicit activity/goal (e.g. "Math Exam", "Physics", "Chemistry Lab")
-      if (subject && subject.length >= 2 && !/^(plan|schedule|calendar)$/i.test(subject)) {
-        const title = this.cleanEventTitle(subject);
+      if (subject && subject.length >= 2 && !this.isMetaPlanTitle(subject)) {
+        const title = this.sanitizeEventTitle(subject, cleanQuery);
         const category = this.inferCategory(title);
         const prio = this.inferPriority(category);
         events.push({
@@ -1841,6 +2313,26 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
           completed: false,
           createdAt: new Date().toISOString()
         });
+      } else {
+        const hasSpecificTime = /(?:at|for|around|pukul|jam)\s+\d{1,2}/i.test(cleanQuery) ||
+                                /\b\d{1,2}(?::\d{2})?\s*(?:am|pm|pagi|siang|sore|malam)\b/i.test(cleanQuery) ||
+                                /\d{1,2}:\d{2}/.test(cleanQuery);
+        if (hasSpecificTime) {
+          const title = isId ? 'Sesi Fokus Terencana' : 'Planned Focus Session';
+          events.push({
+            id: 'evt_' + Math.random().toString(36).substr(2, 9),
+            title,
+            date: targetDate,
+            startTime: times.startTime,
+            endTime: times.endTime,
+            category: 'deep-work',
+            priority: 'Q2',
+            quadrant: isId ? 'Penting, Tidak Mendesak' : 'Important, Not Urgent',
+            notes: isId ? 'Direncanakan lewat Asisten Aethera' : 'Planned via Aethera Assistant',
+            completed: false,
+            createdAt: new Date().toISOString()
+          });
+        }
       }
     }
 
@@ -1916,10 +2408,10 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
       const [sh, sm] = (e.startTime || '09:00').split(':').map(Number);
       const defaultEnd = `${String((sh + 1) % 24).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`;
 
-      const title = this.cleanEventTitle(e.title || '');
+      const title = this.sanitizeEventTitle(e.title || '', this.lastUserQuery);
       return {
         id: e.id || ('evt_' + Math.random().toString(36).substr(2, 9)),
-        title: title || 'Scheduled Activity',
+        title: title || (this.isId() ? 'Sesi Fokus Terencana' : 'Scheduled Activity'),
         date: e.date || fallbackDate || this.formatDateISO(new Date()),
         startTime: e.startTime || '09:00',
         endTime: e.endTime || defaultEnd,
@@ -2066,6 +2558,7 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
   isNoteCreationQuery(text) {
     if (!text || typeof text !== 'string') return false;
     const lower = text.toLowerCase().trim();
+    if (lower.startsWith('/note')) return true;
 
     const noteCommands = [
       /\b(make|create|take|write|draft|start|add|generate|jot\s*down)\s+(me\s+)?(a\s+)?(new\s+)?note\b/i,
@@ -2080,30 +2573,8 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
   }
 
   generateSimulatedNote(query, botReply = '') {
-    // 1. Extract Title
-    let title = '';
-    const quoteMatch = query.match(/["']([^"']+)["']/);
-    const titleMatch = quoteMatch ||
-      query.match(/(?:called|titled|named)\s+([^\n,.;]+?)(?:\s+(?:with|containing|including)\s+|[,.;\n]|$)/i) ||
-      query.match(/(?:about|for|on)\s+([^\n,.;]+?)(?:\s+(?:with|containing|including)\s+|[,.;\n]|$)/i) ||
-      query.match(/note\s*[:\-]\s*([^,.;\n]+)/i);
-
-    if (titleMatch && titleMatch[1]) {
-      title = titleMatch[1].trim();
-      title = title.replace(/^(the|a|an|my|our)\s+/i, '');
-    } else {
-      title = query
-        .replace(/^(can you\s+)?(please\s+)?(make|create|take|write|draft|add|generate|buat|bikin|tulis|catat)\s+(me\s+)?(a\s+)?(new\s+)?(note|notes|catatan)\s*(about|for|on|titled|called|:|-)?/gi, '')
-        .replace(/\s+(with|containing|including)\s+.*/i, '')
-        .replace(/^[\s,;:\-–—]+|[\s,;:\-–—?!.]+$/g, '')
-        .trim();
-    }
-
-    if (!title || title.length < 2) {
-      title = 'Quick Note';
-    } else {
-      title = title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    }
+    const cleanQuery = (query || '').replace(/^\/note\b[:\s-]*/i, '').trim();
+    const title = this.sanitizeNoteTitle('', cleanQuery || query);
 
     // 2. Infer Icon
     let icon = '📄';
@@ -2264,7 +2735,7 @@ Supported block types: "p" (paragraph), "h1", "h2", "h3" (headings), "bullet" (b
     if (!noteData) return null;
 
     const noteId = 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
-    const title = (noteData.title || 'Untitled Note').trim();
+    const title = this.sanitizeNoteTitle(noteData.title || '', this.lastUserQuery);
     const icon = noteData.icon || '📄';
     const folder = noteData.folder || 'Private';
 

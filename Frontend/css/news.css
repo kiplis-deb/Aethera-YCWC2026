@@ -266,10 +266,7 @@ html.theme-transitioning #news-theme-icon {
 }
 
 .news-update-status span.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10B981;
+  display: none !important;
 }
 
 .btn-refresh {
