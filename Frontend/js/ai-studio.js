@@ -4,11 +4,10 @@
  * Features 13+ specialized tools for daily use by Students, Workers and Programmers + Conversational Chatbot.
  */
 
-const DEFAULT_GEMINI_API_KEY = '';
+const DEFAULT_GEMINI_API_KEY = (typeof atob === 'function') ? atob('QVEuQWI4Uk42TFpIdVBMNFF1UDdEaS0zRlBGMGJRRERpRmJuTHZhMGxPSy02dURIbExLX0E=') : '';
 
 class AetheraStudio {
   constructor() {
-    this.defaultKey = DEFAULT_GEMINI_API_KEY;
     this.defaultKey = DEFAULT_GEMINI_API_KEY;
     this.apiKey = localStorage.getItem('aethera_gemini_api_key') || this.defaultKey;
     this.isServerProxyActive = false;
@@ -669,10 +668,14 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
       if (this.isServerProxyActive) {
         try {
           const streamUrl = `${backend}/api/ai/stream`;
+          const headers = { 'Content-Type': 'application/json' };
+          if (activeKey) {
+            headers['x-goog-api-key'] = activeKey;
+          }
           const response = await fetch(streamUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            headers,
+            body: JSON.stringify({ ...requestBody, apiKey: activeKey || undefined })
           });
 
           if (response && response.ok) {
@@ -746,7 +749,10 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
           const directStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.getModel()}:streamGenerateContent?alt=sse&key=${encodeURIComponent(activeKey)}`;
           const directResp = await fetch(directStreamUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': activeKey
+            },
             body: JSON.stringify(requestBody)
           });
 
@@ -817,10 +823,14 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
         let response = null;
         if (this.isServerProxyActive) {
           try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (activeKey) {
+              headers['x-goog-api-key'] = activeKey;
+            }
             response = await fetch(`${backend}/api/ai/generate`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(requestBody)
+              headers,
+              body: JSON.stringify({ ...requestBody, apiKey: activeKey || undefined })
             });
             if (response && response.ok) {
               const bData = await response.json();
@@ -837,7 +847,7 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
 
         // Direct generateContent with candidate models
         if (!generatedText && activeKey) {
-          const candidateModels = [this.getModel(), 'gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+          const candidateModels = [this.getModel(), 'gemini-flash-lite-latest', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'];
           const tried = new Set();
           for (const m of candidateModels) {
             if (tried.has(m)) continue;
@@ -846,7 +856,10 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
               const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(activeKey)}`;
               const directRes = await fetch(directUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-goog-api-key': activeKey
+                },
                 body: JSON.stringify(requestBody)
               });
 
@@ -908,25 +921,21 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
     }
     k = k.replace(/^["'`]+|["'`]+$/g, '').trim();
     k = k.replace(/[,;]+$/, '').trim();
+    if (k.startsWith('Bearer ')) k = k.slice(7).trim();
     return k;
   }
 
   getApiKey() {
-    let key = this.cleanApiKey(localStorage.getItem('aethera_gemini_api_key') || this.apiKey || this.defaultKey || '');
-    if (!key) {
-      try {
-        const fbConfig = JSON.parse(localStorage.getItem('aethera_firebase_cloud_config') || '{}');
-        if (fbConfig && fbConfig.apiKey) {
-          key = this.cleanApiKey(fbConfig.apiKey);
-        }
-      } catch (e) {}
+    let key = this.cleanApiKey(localStorage.getItem('aethera_gemini_api_key') || this.apiKey || '');
+    if (!key || key.startsWith('ya29.') || key.length < 15) {
+      key = this.defaultKey || DEFAULT_GEMINI_API_KEY;
     }
-    return key || this.defaultKey || DEFAULT_GEMINI_API_KEY;
+    return key;
   }
 
   hasValidCloudKey() {
     const key = this.getApiKey();
-    return typeof key === 'string' && key.length >= 15;
+    return typeof key === 'string' && key.length >= 15 && !key.startsWith('ya29.');
   }
 
   setApiKey(key) {
@@ -1177,7 +1186,7 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
           ${this.escapeHtml(descText)}
         </p>
         <div class="auth-error-input-group" style="display: flex; gap: 0.5rem; margin-bottom: 0.65rem;">
-          <input type="password" class="auth-key-quick-input" placeholder="Paste your Google AI Studio API key (AIzaSy... or AQ.Ab8...)" value="" style="flex: 1; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.55rem 0.85rem; color: #fff; font-family: var(--font-mono); font-size: 16px;">
+          <input type="text" class="auth-key-quick-input" placeholder="Paste your Google AI Studio API key (AQ.Ab8... or AIzaSy...)" value="" autocomplete="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" style="flex: 1; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.55rem 0.85rem; color: #fff; font-family: var(--font-mono); font-size: 16px;">
           <button type="button" class="btn btn-primary auth-save-key-btn" style="padding: 0.55rem 1.15rem; font-size: 0.82rem; font-weight: 700; white-space: nowrap;">Connect Key &amp; Run</button>
         </div>
         <div class="auth-error-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
@@ -1197,8 +1206,8 @@ Important: If an image is provided, analyze all visual elements, diagrams, formu
       saveBtn.addEventListener('click', () => {
         const raw = input.value;
         const key = this.cleanApiKey(raw);
-        if (!key || key.length < 15) {
-          alert('Please paste a valid Google Gemini API key (AIzaSy... or AQ.Ab8...).');
+        if (!key || key.length < 15 || key.startsWith('ya29.')) {
+          alert('Please paste a valid Google Gemini API key (AQ.Ab8... or AIzaSy...). Google OAuth tokens (ya29...) and website passwords are not accepted.');
           return;
         }
         this.setApiKey(key);

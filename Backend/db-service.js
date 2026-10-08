@@ -38,14 +38,14 @@ function autoLoadEnv() {
             if (!process.env[key]) process.env[key] = val;
           }
         });
-      } catch (_) {}
+      } catch (_) { }
     }
   }
 }
 autoLoadEnv();
 
 // Node.js < 22 WebSocket compatibility stub for Supabase Realtime initialization
-globalThis.WebSocket = globalThis.WebSocket || class WebSocketStub {};
+globalThis.WebSocket = globalThis.WebSocket || class WebSocketStub { };
 
 // Initialize Supabase Client if credentials exist
 let supabase = null;
@@ -70,7 +70,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       auth: { persistSession: false }
     });
     console.log(`[DB Service] Supabase configured. Target: ${SUPABASE_URL}`);
-    
+
     // Proactively verify connection asynchronously so offline/invalid hosts don't block requests
     setTimeout(async () => {
       try {
@@ -113,7 +113,7 @@ function getLocalDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
       const initial = { users: {}, tokens: {} };
-      try { fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8'); } catch (_) {}
+      try { fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8'); } catch (_) { }
       cachedLocalDB = initial;
       return cachedLocalDB;
     }
@@ -138,7 +138,7 @@ function saveLocalDB(data) {
       fs.renameSync(tmp, DB_FILE);
     } catch {
       fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-      try { fs.unlinkSync(tmp); } catch (_) {}
+      try { fs.unlinkSync(tmp); } catch (_) { }
     }
   } catch (err) {
     // In serverless environments (e.g. Vercel), the local filesystem is read-only.

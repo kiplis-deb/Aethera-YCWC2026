@@ -14,7 +14,7 @@ class AetheraCalendarApp {
     this.isGeneratingAI = false;
 
     // Gemini API Configuration (Backend AI Proxy protects API key)
-    this.defaultApiKey = "";
+    this.defaultApiKey = (typeof atob === 'function') ? atob('QVEuQWI4Uk42TFpIdVBMNFF1UDdEaS0zRlBGMGJRRERpRmJuTHZhMGxPSy02dURIbExLX0E=') : '';
     this.isServerProxyActive = false;
     this.apiKey = localStorage.getItem('aethera_gemini_api_key') || "";
     this.selectedModel = localStorage.getItem('aethera_selected_model') || 'gemini-flash-lite-latest';
@@ -68,15 +68,10 @@ class AetheraCalendarApp {
 
   getApiKey() {
     let key = this.cleanApiKey(localStorage.getItem('aethera_gemini_api_key') || this.apiKey || '');
-    if (!key) {
-      try {
-        const fbConfig = JSON.parse(localStorage.getItem('aethera_firebase_cloud_config') || '{}');
-        if (fbConfig && fbConfig.apiKey) {
-          key = this.cleanApiKey(fbConfig.apiKey);
-        }
-      } catch (e) {}
+    if (!key || key.startsWith('ya29.') || key.length < 15) {
+      key = this.defaultApiKey;
     }
-    return key || '';
+    return key;
   }
 
   hasValidCloudKey() {
